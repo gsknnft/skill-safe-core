@@ -23,10 +23,25 @@ This document defines the exact shape of that report.
 
 ```ts
 type SkillScanReport = {
-  skillId: string;
-  source: SkillSource;
-  result: SanitizationResult;
+  version: "skill-safe.report.v1";
+  riskScore: number; // 0–100
+  summary: {
+    safeToInstall: boolean;
+    severity: "safe" | "caution" | "danger";
+    danger: number;
+    caution: number;
+    hiddenContent: number;
+    normalizedMatches: number;
+  };
+  categories: Partial<Record<SanitizationCategory, number>>;
+  mappings: {
+    owasp: string[];
+    mitreAtlas: string[];
+    nistAiRmf: string[];
+  };
+  recommendedAction: "allow" | "review" | "block";
 };
+
 ```
 
 ### Fields
@@ -43,12 +58,10 @@ type SkillScanReport = {
 
 ```ts
 type SanitizationResult = {
-  safeToInstall: boolean;
-  recommendedAction: "allow" | "review" | "block";
-  riskScore: number;
+  severity: "safe" | "caution" | "danger";
   flags: SanitizationFlag[];
-  categories: Record<string, number>;
-  mappings: RiskMappings;
+  safeToInstall: boolean;
+  report: SkillScanReport;
 };
 ```
 
@@ -112,11 +125,25 @@ These map findings to:
 
 ```ts
 type SanitizationFlag = {
-  id: string;
-  severity: "info" | "low" | "medium" | "high" | "danger";
-  category: string;
+  severity: "caution" | "danger";
+  category: SanitizationCategory;
   description: string;
-  excerpt?: string;
+  matched: string;
+  normalized?: boolean;
+  owasp?: string[];
+  mitreAtlas?: string[];
+  nistAiRmf?: string[];
+};
+```
+
+# 4. `Marketplace Skill Scan`
+
+```ts
+type MarketplaceSkillScan = {
+  skillId: string;
+  source: string;
+  trustLevel: SkillTrustLevel;
+  result: SanitizationResult;
 };
 ```
 
@@ -211,4 +238,3 @@ Any breaking change requires:
 - updated marketplace integration docs
 
 ---
-
