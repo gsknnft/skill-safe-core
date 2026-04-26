@@ -1,0 +1,68 @@
+{
+  "name": "@gsknnft/skill-safe",
+  "version": "0.1.0",
+  "description": "Zero-dependency skill sanitizer — scans agent skill markdown for prompt injection, jailbreaks, data exfiltration, and other red flags before installation.",
+  "keywords": [
+    "agent-skills",
+    "skill-sanitizer",
+    "prompt-injection",
+    "ai-safety",
+    "markdown",
+    "llm-security"
+  ],
+  "author": "gsknnft",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./rules": {
+      "types": "./dist/rules.d.ts",
+      "import": "./dist/rules.js",
+      "default": "./dist/rules.js"
+    },
+    "./trust": {
+      "types": "./dist/trust.d.ts",
+      "import": "./dist/trust.js",
+      "default": "./dist/trust.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "docs",
+    "package.json",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gsknnft/skill-safe.git"
+  },
+  "homepage": "https://github.com/gsknnft/skill-safe#readme",
+  "bugs": {
+    "url": "https://github.com/gsknnft/skill-safe/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "pnpm clean && tsc -p tsconfig.build.json",
+    "tsc:noemit": "tsc -b --noEmit",
+    "test": "vitest run",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "vitest": "4.0.18",
+    "@vitest/coverage-v8": "4.0.18",
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}
