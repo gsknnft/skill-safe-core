@@ -44,11 +44,11 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gsknnft/skill-safe.git"
+    "url": "git+https://github.com/gsknnft/skill-safe-core.git"
   },
-  "homepage": "https://github.com/gsknnft/skill-safe#readme",
+  "homepage": "https://github.com/gsknnft/skill-safe-core#readme",
   "bugs": {
-    "url": "https://github.com/gsknnft/skill-safe/issues"
+    "url": "https://github.com/gsknnft/skill-safe-core/issues"
   },
   "publishConfig": {
     "access": "public"

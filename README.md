@@ -63,6 +63,8 @@ const result = sanitizeSkillMarkdown(markdown);
 result.report.recommendedAction; // "allow" | "review" | "block"
 result.report.riskScore;         // 0-100
 result.report.mappings.owasp;    // governance labels for downstream tools
+result.report.mappings.mitreAtlas;
+result.report.mappings.nistAiRmf;
 ```
 
 The report is designed for UI badges, marketplace review, CI output, and later
