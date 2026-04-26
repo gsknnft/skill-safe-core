@@ -39,7 +39,9 @@
     "dist",
     "docs",
     "package.json",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "repository": {

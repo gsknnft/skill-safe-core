@@ -48,10 +48,12 @@ type SkillScanReport = {
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `skillId` | `string` | Unique identifier for the scanned skill. May be a slug, filename, or marketplace ID. |
-| `source` | `"github" | "local" | "marketplace" | "unknown" | "workspace"` | Normalized source classification. |
-| `result` | `SanitizationResult` | The full static scan output. |
-
+| `version` | `"skill-safe.report.v1"` | Stable schema version for the report. |
+| `riskScore` | `number` | 0–100 priority score for triage. |
+| `summary` | `object` | Aggregated install/severity/count summary. |
+| `categories` | `Partial<Record<SanitizationCategory, number>>` | Counts by finding category. |
+| `mappings` | `RiskMappings` | Cross-framework governance mappings. |
+| `recommendedAction` | `"allow" | "review" | "block"` | Recommended install/review decision. |
 ---
 
 # 2. `SanitizationResult`
@@ -77,13 +79,14 @@ type SanitizationResult = {
 - `"block"` → Any danger‑level finding or composite escalation.
 
 ### `riskScore`
-A normalized numeric score:
+
+`riskScore` is for prioritization. `recommendedAction` is the install decision: `allow`, `review`, or `block`.
 
 | Score | Meaning |
 |--------|---------|
 | `0` | No issues detected |
-| `1–3` | Review recommended |
-| `4+` | Block or escalate |
+| `1–34` | Low/moderate risk; review recommended |
+| `35–100` | Elevated risk; block if `recommendedAction === "block"`, otherwise review/escalate |
 
 ### `flags`
 List of all findings.
@@ -108,8 +111,8 @@ Cross‑framework mappings:
 ```ts
 type RiskMappings = {
   owasp: string[];
-  mitre: string[];
-  nist: string[];
+  mitreAtlas: string[];
+  nistAiRmf: string[];
 };
 ```
 
@@ -136,6 +139,19 @@ type SanitizationFlag = {
 };
 ```
 
+
+### Field Semantics
+
+- **`severity`** — `danger` blocks install; `caution` requires review.
+- **`category`** — One of the scanner’s rule categories.
+- **`description`** — Human-readable explanation.
+- **`matched`** — Short excerpt or display string for the matched content.
+- **`normalized`** — Present when the match was found after normalization/de-obfuscation.
+- **`owasp` / `mitreAtlas` / `nistAiRmf`** — Optional governance mappings for the finding.
+
+---
+
+
 # 4. `Marketplace Skill Scan`
 
 ```ts
@@ -147,18 +163,10 @@ type MarketplaceSkillScan = {
 };
 ```
 
-### Field Semantics
-
-- **`id`** — Stable identifier for rule matching.
-- **`severity`**
-  - `danger` triggers `safeToInstall = false`.
-  - `high` usually triggers `recommendedAction = "block"`.
-- **`category`** — One of the scanner’s rule categories.
-- **`excerpt`** — Optional snippet of matched content (normalized).
-
 ---
 
-# 4. Trust-Level Interaction
+
+# 5. Trust-Level Interaction
 
 `resolveSkillTrustLevel(source, bundled)` maps raw source → normalized trust:
 
@@ -177,7 +185,7 @@ type MarketplaceSkillScan = {
 
 ---
 
-# 5. Integration Requirements
+# 6. Integration Requirements
 
 Any consumer of `SkillScanReport` **must**:
 
@@ -207,7 +215,7 @@ The schema supports:
 
 ---
 
-# 6. Caveats & Guarantees
+# 7. Caveats & Guarantees
 
 ### Guarantees
 - Deterministic output
@@ -223,12 +231,12 @@ The schema supports:
 
 ---
 
-# 7. Versioning
+# 8. Versioning
 
 This schema is locked for:
 
 ```
-@ gsknnft/skill-safe-core v0.1.0
+@gsknnft/skill-safe v0.1.0
 ```
 
 Any breaking change requires:
