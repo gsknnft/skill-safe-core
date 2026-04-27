@@ -2,7 +2,9 @@ import { RULES } from "./rules.js";
 import { getCategoryReportArrays } from "./mappings.js";
 import type {
   SanitizationCategory,
+  SanitizationResult,
   SanitizationSeverity,
+  SanitizationSuppression,
   RuleDefinition,
   SkillRuleId,
 } from "./types.js";
@@ -40,14 +42,7 @@ export type SanitizationFlag = {
   location?: SanitizationLocation;
 };
 
-export type SanitizationResult = {
-  /** Worst severity across all flags, or "safe" if none. */
-  severity: "safe" | "caution" | "danger";
-  flags: SanitizationFlag[];
-  /** false only when at least one "danger" flag is present */
-  safeToInstall: boolean;
-  report: SkillScanReport;
-};
+export type { SanitizationResult, SanitizationSuppression } from "./types.js";
 
 export type SkillScanReport = {
   version: "skill-safe.report.v1";
@@ -222,6 +217,31 @@ const buildReport = (
   };
 };
 
+// ---------------------------------------------------------------------------
+// Suppression
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse `<!-- skill-safe-ignore SS001: reason text -->` comments from content.
+ * Reason text is required — bare `<!-- skill-safe-ignore SS001 -->` is rejected.
+ */
+export const parseSuppressions = (content: string): SanitizationSuppression[] => {
+  const suppressions: SanitizationSuppression[] = [];
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const lineRe = /<!--\s*skill-safe-ignore\s+(SS\w+)\s*:\s*(.+?)\s*-->/gi;
+    let match: RegExpExecArray | null;
+    while ((match = lineRe.exec(lines[i]!)) !== null) {
+      suppressions.push({ ruleId: match[1]!, reason: match[2]!.trim(), line: i + 1 });
+    }
+  }
+  return suppressions;
+};
+
+// ---------------------------------------------------------------------------
+// Scanner
+// ---------------------------------------------------------------------------
+
 /**
  * Scan skill markdown content for red flags.
  *
@@ -232,6 +252,9 @@ export const sanitizeSkillMarkdown = (
   content: string,
   extraRules: RuleDefinition[] = [],
 ): SanitizationResult => {
+  const suppressions = parseSuppressions(content);
+  const suppressedIds = new Set(suppressions.map((s) => s.ruleId));
+
   const flags: SanitizationFlag[] = [];
   const seenPatterns = new Set<string>();
   const allRules = [...RULES, ...extraRules];
@@ -323,18 +346,23 @@ export const sanitizeSkillMarkdown = (
     });
   }
 
-  const hasDanger  = flags.some((f) => f.severity === "danger");
-  const hasCaution = flags.some((f) => f.severity === "caution");
+  const activeFlags = suppressedIds.size > 0
+    ? flags.filter((f) => !f.ruleId || !suppressedIds.has(f.ruleId))
+    : flags;
+
+  const hasDanger  = activeFlags.some((f) => f.severity === "danger");
+  const hasCaution = activeFlags.some((f) => f.severity === "caution");
 
   const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";
   const safeToInstall = !hasDanger;
 
-  const mappedFlags = flags.map(withDefaultMappings);
+  const mappedFlags = activeFlags.map(withDefaultMappings);
 
   return {
     severity,
     flags: mappedFlags,
     safeToInstall,
+    suppressions,
     report: buildReport(severity, safeToInstall, mappedFlags),
   };
 };
@@ -361,6 +389,7 @@ export const appendSanitizationFlags = (
     severity,
     flags,
     safeToInstall,
+    suppressions: result.suppressions,
     report: buildReport(severity, safeToInstall, flags),
   };
 };

@@ -1,6 +1,6 @@
 {
   "name": "@gsknnft/skill-safe",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Zero-dependency skill sanitizer — scans agent skill markdown for prompt injection, jailbreaks, data exfiltration, and other red flags before installation.",
   "keywords": [
     "agent-skills",
@@ -63,6 +63,11 @@
       "import": "./dist/integrity.js",
       "default": "./dist/integrity.js"
     },
+    "./mappings": {
+      "types": "./dist/mappings.d.ts",
+      "import": "./dist/mappings.js",
+      "default": "./dist/mappings.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -98,12 +103,14 @@
     "example:json": "pnpm build && node dist/cli.js --file examples/fixtures/malicious-skill.md --json --fail-on never",
     "example:markdown": "pnpm build && node dist/cli.js --file examples/fixtures/malicious-skill.md --full --fail-on never",
     "example:batch": "pnpm build && node dist/cli.js examples/skills --json --fail-on never",
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "validate:mappings": "tsx scripts/validate-mappings.ts"
   },
   "devDependencies": {
     "vitest": "4.0.18",
     "@vitest/coverage-v8": "4.0.18",
     "@types/node": "^24.10.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "tsx": "^4.19.4"
   }
 }

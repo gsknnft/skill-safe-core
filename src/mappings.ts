@@ -6,32 +6,14 @@
  * produce the backward-compatible flat arrays used in scan reports.
  */
 
-import type { SanitizationCategory } from "./types.js";
+import type {
+  GovernanceFramework,
+  GovernanceMapping,
+  MappingConfidence,
+  SanitizationCategory,
+} from "./types.js";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type GovernanceFramework =
-  | "owasp-agentic"
-  | "owasp-llm"
-  | "mitre-atlas"
-  | "nist-ai-rmf";
-
-export type MappingConfidence = "direct" | "related" | "inferred";
-
-export type GovernanceMapping = {
-  framework: GovernanceFramework;
-  /** Framework-specific identifier (e.g. "LLM01", "AML.T0051"). */
-  id: string;
-  /** Human-readable label. */
-  label: string;
-  /** Canonical URL for this control, if available. */
-  url?: string;
-  /** Framework version this ID was drawn from. */
-  sourceVersion?: string;
-  confidence: MappingConfidence;
-};
+export type { GovernanceFramework, GovernanceMapping, MappingConfidence };
 
 // ---------------------------------------------------------------------------
 // Registry

@@ -86,3 +86,6 @@ export type {
 } from "./types.js";
 
 export type { GovernanceFramework, MappingConfidence, GovernanceMapping } from "./mappings.js";
+
+export type { SanitizationSuppression } from "./types.js";
+export { parseSuppressions } from "./sanitize.js";

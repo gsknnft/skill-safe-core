@@ -82,9 +82,31 @@ export type RuleDefinition = {
 };
 
 export type GovernanceMappings = {
-  owasp: string[];
-  mitreAtlas: string[];
-  nistAiRmf: string[];
+  owasp: GovernanceMapping[];
+  mitreAtlas: GovernanceMapping[];
+  nistAiRmf: GovernanceMapping[];
+};
+
+export type GovernanceFramework =
+  | "owasp-agentic"
+  | "owasp-llm"
+  | "mitre-atlas"
+  | "nist-ai-rmf";
+
+export type MappingConfidence = "direct" | "related" | "inferred";
+
+export type GovernanceMapping = {
+  framework: GovernanceFramework;
+  id: string;
+  label: string;
+  url?: string;
+  sourceVersion?: string;
+  confidence: MappingConfidence;
+};
+
+export type CategoryGovernanceMapping = {
+  category: SanitizationCategory;
+  mappings: GovernanceMapping[];
 };
 
 export type SkillSourceDescriptor = {
@@ -158,12 +180,21 @@ export type SanitizationFlag = {
   location?: SanitizationLocation;
 };
 
+export type SanitizationSuppression = {
+  ruleId: string;
+  reason: string;
+  /** 1-based line number of the suppression comment. */
+  line: number;
+};
+
 export type SanitizationResult = {
   /** Worst severity across all flags, or "safe" if none. */
   severity: "safe" | "caution" | "danger";
   flags: SanitizationFlag[];
   /** false only when at least one "danger" flag is present */
   safeToInstall: boolean;
+  /** Suppressions parsed from skill-safe-ignore comments in the content. */
+  suppressions: SanitizationSuppression[];
   report: SkillScanReport;
 };
 
