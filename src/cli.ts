@@ -2,21 +2,23 @@
 import { stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import {
-  describeSkillSource,
-  resolveAndScanSkillMarkdown,
-} from "./resolver.js";
-import {
-  createSkillSafeDocumentReport,
-  createSkillSafeReport,
-  formatSkillSafeReportMarkdown,
-  stringifySkillSafeReportJson,
-  type SkillSafeFullReport,
-} from "./reporter.js";
-import { stringifySkillSafeSarifJson } from "./sarif.js";
+import
+    {
+        createSkillSafeDocumentReport,
+        createSkillSafeReport,
+        formatSkillSafeReportMarkdown,
+        stringifySkillSafeReportJson,
+    } from "./reporter.js";
+import
+    {
+        describeSkillSource,
+        resolveAndScanSkillMarkdown,
+    } from "./resolver.js";
 import { sanitizeSkillMarkdown } from "./sanitize.js";
+import { stringifySkillSafeSarifJson } from "./sarif.js";
 import { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 import { requiresSanitization } from "./trust.js";
+import type { SkillSafeFullReport } from "./types.js";
 
 type Args = {
   source: string | null;
@@ -62,7 +64,7 @@ Usage:
 
 Sources:
   github:owner/repo[@branch][/path]
-  hashlips:repo[@branch][/path]
+  # hashlips: is now universal: use github:HashLips/repo or hashlips:repo
   npm:package[/path]
   registry:https://example.com/SKILL.md
   https://example.com/SKILL.md
@@ -78,7 +80,7 @@ Sources:
     - souls:<id>                → community
     - hermes:<id>               → community
     - anything else             → unknown
-    
+
 Options:
   --json              Print the complete JSON report.
   --sarif             Print a SARIF v2.1.0 report for GitHub Code Scanning.

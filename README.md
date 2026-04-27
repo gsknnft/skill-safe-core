@@ -1,5 +1,9 @@
 # @gsknnft/skill-safe
 
+A lightweight static scanner for agent skill markdown before install.
+
+<img src="public/logo.jpg" alt="Skill Safe Banner" width="600" style="max-width:100%;height:auto;display:block;margin:auto;alignment:centered" />
+
 Zero-dependency TypeScript sanitizer for agent skill markdown.
 
 `skill-safe` is a static pre-install gate. It scans skill files for prompt
@@ -11,6 +15,32 @@ before a skill is installed or enabled.
 It is not a sandbox. A safe scan result means no known static red flags were
 found; runtime permissions, tool allowlists, filesystem isolation, network
 policy, and human review still matter.
+
+## Why skill-safe
+
+`skill-safe` is a small deterministic first gate for agent skill markdown.
+
+It is intentionally narrower than full agent-security platforms. It does not run
+skills, sandbox tools, call an LLM, or inventory every agent runtime on the
+machine. Instead, it gives marketplaces, local agent UIs, and CI workflows a
+fast static pre-install check that can run before a skill is trusted.
+
+Core differences:
+
+- zero runtime dependencies
+- deterministic scan results
+- library-first API plus CLI
+- recursive `SKILL.md` batch scanning
+- source trust normalization
+- npm package age and provenance policy hooks
+- hidden-content detection including zero-width/invisible Unicode
+- stable `SS###` rule IDs with line/column evidence
+- full JSON, Markdown, and SARIF report output
+- OWASP / MITRE ATLAS / NIST AI RMF mapping context on findings
+
+Use `skill-safe` as the first gate. Pair it with runtime sandboxing, tool
+allowlists, human approval, and optional semantic review for a complete defense
+layer.
 
 ## Install
 
@@ -100,10 +130,13 @@ Every scan returns both raw flags and a structured static report:
 const result = sanitizeSkillMarkdown(markdown);
 
 result.report.recommendedAction; // "allow" | "review" | "block"
-result.report.riskScore;         // 0-100
-result.report.mappings.owasp;    // governance labels for downstream tools
+result.report.riskScore; // 0-100
+result.report.mappings.owasp; // governance labels for downstream tools
 result.report.mappings.mitreAtlas;
 result.report.mappings.nistAiRmf;
+
+result.flags[0]?.ruleId; // stable SS### rule ID when available
+result.flags[0]?.location; // line/column/offset evidence when available
 ```
 
 The report is designed for UI badges, marketplace review, CI output, and later
@@ -167,6 +200,52 @@ The full report envelope includes:
 - governance mappings
 - JSON and Markdown rendering
 
+## Governance Mappings
+
+Every finding category is mapped into governance fields that downstream tools can
+use for CI policy, marketplace review, and security dashboards:
+
+```json
+{
+  "category": "prompt-injection",
+  "severity": "danger",
+  "owasp": ["AST01 Malicious Skills", "LLM01 Prompt Injection"],
+  "mitreAtlas": [
+    "AML.T0051 Prompt Injection",
+    "AML.T0054 Indirect Prompt Injection"
+  ],
+  "nistAiRmf": ["Measure", "Manage"]
+}
+```
+
+The top-level report aggregates those fields under `report.mappings`:
+
+```json
+{
+  "mappings": {
+    "owasp": ["AST01 Malicious Skills", "LLM01 Prompt Injection"],
+    "mitreAtlas": ["AML.T0051 Prompt Injection"],
+    "nistAiRmf": ["Measure", "Manage"]
+  }
+}
+```
+
+Current category-level mapping intent:
+
+| skill-safe category                  | Governance context                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------- |
+| `prompt-injection`                   | OWASP AST01 / LLM01, MITRE ATLAS prompt injection, NIST Measure/Manage                |
+| `jailbreak`                          | OWASP AST01 / LLM01, MITRE ATLAS prompt injection, NIST Measure/Manage                |
+| `data-exfiltration`                  | OWASP AST01 / AST03, MITRE exfiltration context, NIST Measure/Manage                  |
+| `script-injection`                   | OWASP AST01 / AST04, execution/tool-abuse context, NIST Map/Manage                    |
+| `hidden-content`                     | OWASP AST01 / AST04, MITRE indirect prompt injection, NIST Map/Measure                |
+| `hitl-bypass`                        | OWASP AST03 and HITL bypass context, privilege/tool-abuse context, NIST Govern/Manage |
+| `package-age` / `missing-provenance` | OWASP AST02 / LLM03, supply-chain context, NIST Map/Govern/Manage                     |
+
+`skill-safe` keeps these labels as governance context rather than treating a
+static regex match as a complete incident classification. Hosts can still use
+specific labels to block, quarantine, or require review.
+
 ## Trust Levels
 
 `resolveSkillTrustLevel(source, bundled)` maps raw source labels into:
@@ -186,7 +265,10 @@ scanned even if they are not treated like community content in the UI.
 Community rule additions should usually only touch `src/rules.ts`.
 
 ```ts
-import { sanitizeSkillMarkdown, type RuleDefinition } from "@gsknnft/skill-safe";
+import {
+  sanitizeSkillMarkdown,
+  type RuleDefinition,
+} from "@gsknnft/skill-safe";
 
 const extraRules: RuleDefinition[] = [
   {

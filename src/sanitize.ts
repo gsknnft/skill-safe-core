@@ -1,9 +1,29 @@
-import { RULES } from "./rules.js";
-import type { SanitizationCategory, SanitizationSeverity, RuleDefinition } from "./rules.js";
+import { CATEGORY_GOVERNANCE_MAPPINGS, RULES } from "./rules.js";
+import type {
+  SanitizationCategory,
+  SanitizationSeverity,
+  RuleDefinition,
+  SkillRuleId,
+} from "./types.js";
 
 export type { SanitizationCategory, SanitizationSeverity, RuleDefinition };
 
+export type SanitizationLocation = {
+  /** 1-based line number in the scanned content. */
+  line: number;
+  /** 1-based column number in the scanned content. */
+  column: number;
+  /** UTF-16 string offset used by JavaScript RegExp matches. */
+  offset: number;
+  /** UTF-8 byte offset for scanners/reporters that need byte coordinates. */
+  byteOffset: number;
+};
+
 export type SanitizationFlag = {
+  /** Stable rule identifier for built-in rules and synthetic source checks. */
+  ruleId?: SkillRuleId;
+  /** Stable short rule name for reports and future suppressions. */
+  ruleName?: string;
   severity: SanitizationSeverity;
   category: SanitizationCategory;
   description: string;
@@ -15,6 +35,8 @@ export type SanitizationFlag = {
   owasp?: string[];
   mitreAtlas?: string[];
   nistAiRmf?: string[];
+  /** Best-effort evidence location for content-backed findings. */
+  location?: SanitizationLocation;
 };
 
 export type SanitizationResult = {
@@ -125,8 +147,39 @@ const excerptMatch = (content: string, index: number, matchLength: number): stri
   return end < content.length ? `${raw}...` : raw;
 };
 
+const getLocation = (content: string, offset: number): SanitizationLocation => {
+  const safeOffset = Math.max(0, Math.min(offset, content.length));
+  let line = 1;
+  let lineStart = 0;
+
+  for (let i = 0; i < safeOffset; i += 1) {
+    const char = content.charCodeAt(i);
+    if (char === 10) {
+      line += 1;
+      lineStart = i + 1;
+    }
+  }
+
+  return {
+    line,
+    column: safeOffset - lineStart + 1,
+    offset: safeOffset,
+    byteOffset: new TextEncoder().encode(content.slice(0, safeOffset)).length,
+  };
+};
+
 const uniqueSorted = (values: Array<string | undefined>): string[] =>
   [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
+
+const withDefaultMappings = (flag: SanitizationFlag): SanitizationFlag => {
+  const defaults = CATEGORY_GOVERNANCE_MAPPINGS[flag.category];
+  return {
+    ...flag,
+    owasp: flag.owasp ?? defaults.owasp,
+    mitreAtlas: flag.mitreAtlas ?? defaults.mitreAtlas,
+    nistAiRmf: flag.nistAiRmf ?? defaults.nistAiRmf,
+  };
+};
 
 const buildReport = (
   severity: "safe" | "caution" | "danger",
@@ -186,10 +239,13 @@ export const sanitizeSkillMarkdown = (
   const invisibleRuns = [...content.matchAll(INVISIBLE_RUN_RE)];
   for (const match of invisibleRuns) {
     flags.push({
+      ruleId: "SS081",
+      ruleName: "invisible-unicode-run",
       severity: "danger",
       category: "hidden-content",
       description: "Contains a long run of invisible Unicode characters.",
       matched: excerptMatch(content, match.index ?? 0, match[0].length),
+      location: getLocation(content, match.index ?? 0),
       owasp: ["Agentic Instruction and Tool Manipulation"],
       nistAiRmf: ["Map", "Measure"],
     });
@@ -197,11 +253,15 @@ export const sanitizeSkillMarkdown = (
 
   const invisibleCount = (content.match(INVISIBLE_RE) ?? []).length;
   if (invisibleCount > 0 && invisibleRuns.length === 0) {
+    const firstInvisibleIndex = Math.max(0, content.search(INVISIBLE_RE));
     flags.push({
+      ruleId: "SS082",
+      ruleName: "invisible-unicode-character",
       severity: "caution",
       category: "hidden-content",
       description: "Contains invisible Unicode characters that may hide instructions from reviewers.",
       matched: `${invisibleCount} invisible character${invisibleCount === 1 ? "" : "s"}`,
+      location: getLocation(content, firstInvisibleIndex),
       owasp: ["Agentic Instruction and Tool Manipulation"],
       nistAiRmf: ["Map", "Measure"],
     });
@@ -223,7 +283,10 @@ export const sanitizeSkillMarkdown = (
     if (!match) continue;
 
     seenPatterns.add(key);
+    const matchContent = matchedNormalized ? normalizedContent : content;
     flags.push({
+      ruleId:      rule.id,
+      ruleName:    rule.name,
       severity:    rule.severity,
       category:    rule.category,
       description: rule.description,
@@ -231,6 +294,7 @@ export const sanitizeSkillMarkdown = (
         ? excerptMatch(normalizedContent, match.index, match[0].length)
         : excerptMatch(content, match.index, match[0].length),
       normalized:  matchedNormalized || undefined,
+      location:    getLocation(matchContent, match.index),
       owasp:       rule.owasp,
       mitreAtlas:  rule.mitreAtlas,
       nistAiRmf:   rule.nistAiRmf,
@@ -246,6 +310,8 @@ export const sanitizeSkillMarkdown = (
   const hasExecution = categories.has("data-exfiltration") || categories.has("script-injection");
   if (hasInjection && hasExecution) {
     flags.push({
+      ruleId:      "SS900",
+      ruleName:    "lethal-trifecta-composite",
       severity:    "danger",
       category:    "prompt-injection",
       description: "Composite risk: instruction override combined with network/code-execution vector (Lethal Trifecta).",
@@ -262,11 +328,13 @@ export const sanitizeSkillMarkdown = (
   const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";
   const safeToInstall = !hasDanger;
 
+  const mappedFlags = flags.map(withDefaultMappings);
+
   return {
     severity,
-    flags,
+    flags: mappedFlags,
     safeToInstall,
-    report: buildReport(severity, safeToInstall, flags),
+    report: buildReport(severity, safeToInstall, mappedFlags),
   };
 };
 
@@ -282,7 +350,7 @@ export const appendSanitizationFlags = (
 ): SanitizationResult => {
   if (additionalFlags.length === 0) return result;
 
-  const flags = [...additionalFlags, ...result.flags];
+  const flags = [...additionalFlags, ...result.flags].map(withDefaultMappings);
   const hasDanger = flags.some((flag) => flag.severity === "danger");
   const hasCaution = flags.some((flag) => flag.severity === "caution");
   const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";

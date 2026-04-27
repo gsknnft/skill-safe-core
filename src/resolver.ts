@@ -1,84 +1,23 @@
-import {
-  appendSanitizationFlags,
-  sanitizeSkillMarkdown,
-  type SanitizationFlag,
-  type SanitizationResult,
-} from "./sanitize.js";
-import {
-  requiresSanitization,
-  resolveSkillTrustLevel,
-  type SkillTrustLevel,
-} from "./trust.js";
+import
+  {
+    appendSanitizationFlags,
+    sanitizeSkillMarkdown,
+    type SanitizationFlag,
+  } from "./sanitize.js";
+import
+  {
+    requiresSanitization,
+    resolveSkillTrustLevel,
+  } from "./trust.js";
 
-export type SkillSourceKind =
-  | "github"
-  | "hashlips"
-  | "npm"
-  | "registry"
-  | "souls"
-  | "hermes"
-  | "openclaw"
-  | "workspace"
-  | "url"
-  | "unknown";
-
-export type GitHubSkillShorthand = {
-  owner: string;
-  repo: string;
-  branch: string;
-  path: string;
-};
-
-export type SkillSourceDescriptor = {
-  source: string;
-  kind: SkillSourceKind;
-  trust: SkillTrustLevel;
-  bundled: boolean;
-  value: string;
-  directlyResolvable: boolean;
-};
-
-export type ResolvedSkillMarkdown = SkillSourceDescriptor & {
-  resolvedUrl: string | null;
-  markdown: string;
-  /**
-   * Source-level flags injected before content analysis — e.g. age-gate or
-   * missing provenance. Empty array when not applicable.
-   */
-  sourceFlags: SanitizationFlag[];
-};
-
-export type ResolvedSkillScanReport = ResolvedSkillMarkdown & {
-  scan: SanitizationResult | null;
-};
-
-export type SkillSourceResolver = (
-  descriptor: SkillSourceDescriptor,
-) => Promise<string | { markdown: string; resolvedUrl?: string | null }>;
-
-export type NpmSourcePolicy = {
-  /**
-   * Minimum age in days a package version must have before it is trusted.
-   * Mitigates package-takeover and typosquatting attacks where a malicious
-   * version is published and immediately consumed by automated agents.
-   * Defaults to 2.
-   */
-  minAgeDays?: number;
-  /**
-   * When true, a `missing-provenance` flag is emitted if the registry has no
-   * OIDC/Sigstore attestation for the resolved version.
-   * Defaults to false (provenance check is a best-effort stub today).
-   */
-  requireProvenance?: boolean;
-};
-
-export type SkillResolverOptions = {
-  bundled?: boolean;
-  fetcher?: typeof fetch;
-  resolvers?: Partial<Record<SkillSourceKind, SkillSourceResolver>>;
-  /** Policy applied when resolving npm: sources. */
-  npmPolicy?: NpmSourcePolicy;
-};
+import type {
+  GitHubSkillShorthand,
+  NpmSourcePolicy,
+  ResolvedSkillMarkdown,
+  ResolvedSkillScanReport,
+  SkillResolverOptions,
+  SkillSourceDescriptor,
+} from "./types.js";
 
 const DEFAULT_MARKDOWN_CANDIDATES = [
   "SKILL.md",
@@ -96,51 +35,51 @@ const assertNonEmpty = (value: string, label: string): string => {
 const stripPrefix = (source: string, prefix: string): string =>
   source.slice(prefix.length).trim();
 
-export function parseGithubShorthand(input: string): GitHubSkillShorthand {
-  if (!input.startsWith("github:")) {
-    throw new Error("Not a GitHub shorthand");
-  }
-
-  const cleaned = stripPrefix(input, "github:");
+// parseGithubShorthand.ts
+export function parseGithubShorthand(input: string) {
+  if (!input.startsWith("github:")) throw new Error("Not a github: source");
+  const cleaned = input.slice("github:".length);
   const firstSlash = cleaned.indexOf("/");
-  if (firstSlash === -1) {
-    throw new Error(
-      "Invalid GitHub shorthand: expected github:owner/repo[@branch][/path]",
-    );
+  if (firstSlash === -1) throw new Error("Invalid github shorthand, expected github:owner/repo");
+
+  const owner = cleaned.slice(0, firstSlash);
+  const rest = cleaned.slice(firstSlash + 1); // repo[@branch][/path]
+
+  let repo = rest;
+  let branch = "main";
+  let path = "";
+
+  const slashAfterRepo = rest.indexOf("/");
+  const atIndex = rest.indexOf("@");
+
+  if (atIndex !== -1 && (slashAfterRepo === -1 || atIndex < slashAfterRepo)) {
+    repo = rest.slice(0, atIndex);
+    const afterAt = rest.slice(atIndex + 1);
+    const nextSlash = afterAt.indexOf("/");
+    if (nextSlash === -1) branch = afterAt;
+    else {
+      branch = afterAt.slice(0, nextSlash);
+      path = afterAt.slice(nextSlash + 1);
+    }
+  } else if (slashAfterRepo !== -1) {
+    repo = rest.slice(0, slashAfterRepo);
+    path = rest.slice(slashAfterRepo + 1);
   }
 
-  const owner = assertNonEmpty(cleaned.slice(0, firstSlash), "owner");
-  const rest = assertNonEmpty(cleaned.slice(firstSlash + 1), "repo");
-  const slashIndex = rest.indexOf("/");
-  const repoAndBranch = slashIndex === -1 ? rest : rest.slice(0, slashIndex);
-  const explicitPath = slashIndex === -1 ? "" : rest.slice(slashIndex + 1);
-  const atIndex = repoAndBranch.indexOf("@");
-  const repo = assertNonEmpty(
-    atIndex === -1 ? repoAndBranch : repoAndBranch.slice(0, atIndex),
-    "repo",
-  );
-  const branch = assertNonEmpty(
-    atIndex === -1 ? "main" : repoAndBranch.slice(atIndex + 1),
-    "branch",
-  );
-
-  return {
-    owner,
-    repo,
-    branch,
-    path: explicitPath.trim(),
-  };
+  return { owner, repo, branch, path };
 }
 
-export function parseHashLipsShorthand(input: string): GitHubSkillShorthand {
-  if (!input.startsWith("hashlips:")) {
-    throw new Error("Not a HashLips shorthand");
+
+export function parseShorthand(input: string): GitHubSkillShorthand {
+  if (!input.includes(":")) {
+    throw new Error("Not a valid shorthand");
   }
-  const value = stripPrefix(input, "hashlips:");
-  const repoSource = value.includes("/")
-    ? `github:HashLips/${value}`
-    : `github:HashLips/${assertNonEmpty(value, "repo")}`;
-  return parseGithubShorthand(repoSource);
+  // Accepts "github:owner/repo[@branch][/path]"
+  if (input.startsWith("github:")) {
+    return parseGithubShorthand(input);
+  }
+  // Optionally, handle other prefixes or throw for unsupported ones
+  throw new Error("Unsupported shorthand prefix");
 }
 
 export function resolveGithubRawUrl(input: string): string {
@@ -151,10 +90,10 @@ export function resolveGithubRawUrl(input: string): string {
 
 export const resolveGithubUrl = resolveGithubRawUrl;
 
-export function resolveHashLipsRawUrl(input: string): string {
-  const parsed = parseHashLipsShorthand(input);
-  const markdownPath = parsed.path || DEFAULT_MARKDOWN_CANDIDATES[0];
-  return `https://raw.githubusercontent.com/HashLips/${encodeURIComponent(parsed.repo)}/${encodeURIComponent(parsed.branch)}/${markdownPath}`;
+export function resolveUserRawUrl(input: string): string {
+  const { owner, repo, branch, path } = parseShorthand(input);
+  const markdownPath = path || DEFAULT_MARKDOWN_CANDIDATES[0];
+  return `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${encodeURIComponent(branch)}/${markdownPath}`;
 }
 
 const isHttpUrl = (value: string): boolean => {
@@ -185,13 +124,15 @@ export function describeSkillSource(
       directlyResolvable: true,
     };
   }
+  // Treat hashlips:repo as github:HashLips/repo
   if (lower.startsWith("hashlips:")) {
+    const githubSource = `github:HashLips/${stripPrefix(trimmed, "hashlips:")}`;
     return {
-      source: trimmed,
-      kind: "hashlips",
-      trust,
+      source: githubSource,
+      kind: "github",
+      trust: resolveSkillTrustLevel(githubSource, bundled),
       bundled,
-      value: stripPrefix(trimmed, "hashlips:"),
+      value: `HashLips/${stripPrefix(trimmed, "hashlips:")}`,
       directlyResolvable: true,
     };
   }
@@ -409,6 +350,8 @@ function buildNpmSourceFlags(
     const ageDays = ageMs / 86_400_000;
     if (ageDays < minAgeDays) {
       flags.push({
+        ruleId: "SS901",
+        ruleName: "npm-package-age-gate",
         severity: "danger",
         category: "package-age",
         description: `npm package "${packageSpec}" was published ${ageDays.toFixed(1)} day(s) ago — below the ${minAgeDays}-day minimum. This is a high-risk window for supply-chain attacks.`,
@@ -421,6 +364,8 @@ function buildNpmSourceFlags(
 
   if (policy.requireProvenance && !meta.hasAttestation) {
     flags.push({
+      ruleId: "SS902",
+      ruleName: "npm-missing-provenance",
       severity: "caution",
       category: "missing-provenance",
       description: `npm package "${packageSpec}" has no OIDC/Sigstore provenance attestation in the registry. Build origin cannot be verified.`,
@@ -451,11 +396,6 @@ async function resolveDirectMarkdown(
     case "github":
       return fetchFirstMarkdown(
         githubCandidateUrls(parseGithubShorthand(descriptor.source)),
-        fetcher,
-      );
-    case "hashlips":
-      return fetchFirstMarkdown(
-        githubCandidateUrls(parseHashLipsShorthand(descriptor.source)),
         fetcher,
       );
     case "npm":

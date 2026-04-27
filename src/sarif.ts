@@ -5,97 +5,21 @@
  * GitHub schema: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-github-code-scanning
  */
 
-import type { SkillSafeFullReport, SkillSafeDocumentReport } from "./reporter.js";
-import type { SanitizationFlag } from "./sanitize.js";
-import type { SanitizationCategory } from "./rules.js";
+import type { RuleDefinition, SanitizationCategory, SanitizationFlag } from "./sanitize.js";
+import { RULES } from "./rules.js";
+import type {
+  SarifResult,
+  SkillSafeDocumentReport,
+  SarifRule,
+  SarifLocation,
+  SkillSafeFullReport,
+  SarifLog,
+  SarifArtifact,
+  SarifRuleMeta,
+} from "./types.js";
 
-// ---------------------------------------------------------------------------
-// SARIF types (minimal subset for GitHub Code Scanning)
-// ---------------------------------------------------------------------------
 
-export type SarifLog = {
-  $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json";
-  version: "2.1.0";
-  runs: SarifRun[];
-};
-
-export type SarifRule = {
-  id: string;
-  name: string;
-  shortDescription: { text: string };
-  fullDescription: { text: string };
-  helpUri: string;
-  defaultConfiguration: { level: "error" | "warning" | "note" | "none" };
-  properties: {
-    tags: string[];
-    /** CVSS-like score string, 0.0–10.0, used by GitHub Advanced Security. */
-    "security-severity": string;
-    precision: "very-high" | "high" | "medium" | "low";
-    "problem.severity": "error" | "warning" | "recommendation";
-  };
-};
-
-export type SarifLocation = {
-  physicalLocation: {
-    artifactLocation: {
-      uri: string;
-      uriBaseId: "%SRCROOT%";
-    };
-    region: { startLine: number };
-  };
-};
-
-export type SarifResult = {
-  ruleId: string;
-  ruleIndex: number;
-  level: "error" | "warning" | "note" | "none";
-  message: { text: string };
-  locations: SarifLocation[];
-  partialFingerprints?: Record<string, string>;
-  properties?: {
-    matched?: string;
-    normalized?: boolean;
-    owasp?: string[];
-    mitreAtlas?: string[];
-    nistAiRmf?: string[];
-  };
-};
-
-export type SarifArtifact = {
-  location: { uri: string; uriBaseId: "%SRCROOT%" };
-  length: number;
-  mimeType: "text/markdown";
-  properties: { trustLevel: string; sourceKind: string };
-};
-
-export type SarifRun = {
-  tool: {
-    driver: {
-      name: "skill-safe";
-      version: string;
-      informationUri: string;
-      rules: SarifRule[];
-    };
-  };
-  results: SarifResult[];
-  artifacts: SarifArtifact[];
-  properties: {
-    "skill-safe:report": {
-      mode: string;
-      riskScore: number;
-      recommendedAction: string;
-    };
-  };
-};
-
-// ---------------------------------------------------------------------------
-// Category → SARIF rule mapping
-// ---------------------------------------------------------------------------
-
-const CATEGORY_RULE_META: Record<
-  SanitizationCategory,
-  { id: string; name: string; short: string; full: string; securitySeverity: string; precision: SarifRule["properties"]["precision"] }
-> = {
+const CATEGORY_RULE_META: Record<SanitizationCategory, SarifRuleMeta> = {
   "prompt-injection": {
     id:   "SS/prompt-injection",
     name: "PromptInjection",
@@ -186,6 +110,54 @@ const CATEGORY_RULE_META: Record<
   },
 };
 
+const SYNTHETIC_RULE_META: Record<string, SarifRuleMeta> = {
+  SS081: {
+    id: "SS081",
+    name: "InvisibleUnicodeRun",
+    short: "Long invisible Unicode run detected.",
+    full: "The skill contains a long run of invisible Unicode characters that may hide instructions from reviewers while remaining visible to an LLM.",
+    securitySeverity: "8.0",
+    precision: "very-high",
+    category: "hidden-content",
+  },
+  SS082: {
+    id: "SS082",
+    name: "InvisibleUnicodeCharacter",
+    short: "Invisible Unicode character detected.",
+    full: "The skill contains invisible Unicode characters that may hide or split operational instructions.",
+    securitySeverity: "6.0",
+    precision: "very-high",
+    category: "hidden-content",
+  },
+  SS900: {
+    id: "SS900",
+    name: "LethalTrifectaComposite",
+    short: "Instruction override combined with execution or exfiltration.",
+    full: "The skill combines an instruction override with a network or code execution vector. This composite pattern is significantly higher risk than either finding alone.",
+    securitySeverity: "9.8",
+    precision: "high",
+    category: "prompt-injection",
+  },
+  SS901: {
+    id: "SS901",
+    name: "NpmPackageAgeGate",
+    short: "npm package version is inside the minimum-age window.",
+    full: "The resolved npm package version was published too recently to satisfy the configured source policy.",
+    securitySeverity: "7.0",
+    precision: "high",
+    category: "package-age",
+  },
+  SS902: {
+    id: "SS902",
+    name: "NpmMissingProvenance",
+    short: "npm package provenance attestation is missing.",
+    full: "The resolved npm package has no registry provenance attestation. Build origin could not be verified from registry metadata.",
+    securitySeverity: "4.0",
+    precision: "medium",
+    category: "missing-provenance",
+  },
+};
+
 const ORDERED_CATEGORIES: SanitizationCategory[] = [
   "prompt-injection",
   "identity-hijack",
@@ -200,10 +172,6 @@ const ORDERED_CATEGORIES: SanitizationCategory[] = [
   "missing-provenance",
 ];
 
-const CATEGORY_INDEX = new Map<SanitizationCategory, number>(
-  ORDERED_CATEGORIES.map((cat, i) => [cat, i]),
-);
-
 const severityToLevel = (severity: SanitizationFlag["severity"]): SarifResult["level"] =>
   severity === "danger" ? "error" : "warning";
 
@@ -215,61 +183,98 @@ const buildArtifactUri = (doc: SkillSafeDocumentReport): string => {
   return src.startsWith("/") || src.includes("://") ? src : `./${src}`;
 };
 
-const buildRules = (): SarifRule[] =>
-  ORDERED_CATEGORIES.map((cat) => {
-    const meta = CATEGORY_RULE_META[cat];
-    return {
-      id: meta.id,
-      name: meta.name,
-      shortDescription: { text: meta.short },
-      fullDescription: { text: meta.full },
-      helpUri: `https://github.com/gsknnft/skill-safe-core#${cat}`,
-      defaultConfiguration: {
-        level: Number(meta.securitySeverity) >= 7 ? "error" : "warning",
-      },
-      properties: {
-        tags: ["security", "ai-safety", cat],
-        "security-severity": meta.securitySeverity,
-        precision: meta.precision,
-        "problem.severity":
-          Number(meta.securitySeverity) >= 7
-            ? "error"
-            : Number(meta.securitySeverity) >= 4
-              ? "warning"
-              : "recommendation",
-      },
-    };
-  });
+const ruleMetaToSarifRule = (meta: SarifRuleMeta): SarifRule => ({
+  id: meta.id,
+  name: meta.name,
+  shortDescription: { text: meta.short },
+  fullDescription: { text: meta.full },
+  helpUri: `https://github.com/gsknnft/skill-safe-core#${meta.category ?? meta.id.toLowerCase()}`,
+  defaultConfiguration: {
+    level: Number(meta.securitySeverity) >= 7 ? "error" : "warning",
+  },
+  properties: {
+    tags: ["security", "ai-safety", meta.category ?? meta.id],
+    "security-severity": meta.securitySeverity,
+    precision: meta.precision,
+    "problem.severity":
+      Number(meta.securitySeverity) >= 7
+        ? "error"
+        : Number(meta.securitySeverity) >= 4
+          ? "warning"
+          : "recommendation",
+  },
+});
+
+const ruleDefinitionToMeta = (rule: RuleDefinition): SarifRuleMeta | null => {
+  if (!rule.id) return null;
+  const categoryMeta = CATEGORY_RULE_META[rule.category];
+  return {
+    id: rule.id,
+    name: rule.name ?? rule.id,
+    short: rule.description,
+    full: rule.description,
+    securitySeverity: categoryMeta.securitySeverity,
+    precision: categoryMeta.precision,
+    category: rule.category,
+  };
+};
+
+const buildRules = (): SarifRule[] => {
+  const categoryRules = ORDERED_CATEGORIES.map((cat) =>
+    ruleMetaToSarifRule(CATEGORY_RULE_META[cat]),
+  );
+  const builtInRules = RULES
+    .map(ruleDefinitionToMeta)
+    .filter((meta): meta is SarifRuleMeta => meta !== null)
+    .map(ruleMetaToSarifRule);
+  const syntheticRules = Object.values(SYNTHETIC_RULE_META).map(ruleMetaToSarifRule);
+
+  return [...categoryRules, ...builtInRules, ...syntheticRules];
+};
+
+const buildRegion = (flag: SanitizationFlag): SarifLocation["physicalLocation"]["region"] => {
+  if (!flag.location) return { startLine: 1 };
+  return {
+    startLine: flag.location.line,
+    startColumn: flag.location.column,
+    charOffset: flag.location.offset,
+    byteOffset: flag.location.byteOffset,
+  };
+};
 
 const buildResultsForDocument = (
   doc: SkillSafeDocumentReport,
-  artifactIndex: number,
+  ruleIndexById: Map<string, number>,
 ): SarifResult[] => {
   const uri = buildArtifactUri(doc);
 
   return doc.scan.flags.map((flag) => {
     const meta = CATEGORY_RULE_META[flag.category as SanitizationCategory];
-    const ruleIndex = CATEGORY_INDEX.get(flag.category as SanitizationCategory) ?? 0;
+    const fallbackRuleId = meta?.id ?? `SS/${flag.category}`;
+    const ruleId = flag.ruleId ?? fallbackRuleId;
+    const ruleIndex = ruleIndexById.get(ruleId) ?? ruleIndexById.get(fallbackRuleId) ?? 0;
     return {
-      ruleId: meta?.id ?? `SS/${flag.category}`,
+      ruleId,
       ruleIndex,
       level: severityToLevel(flag.severity),
       message: {
-        text: `[${flag.category}] ${flag.description} — matched: ${flag.matched.slice(0, 200)}`,
+        text: `[${flag.ruleId ?? flag.category}] ${flag.description} - matched: ${flag.matched.slice(0, 200)}`,
       },
       locations: [
         {
           physicalLocation: {
             artifactLocation: { uri, uriBaseId: "%SRCROOT%" },
-            region: { startLine: 1 },
+            region: buildRegion(flag),
           },
         },
       ],
       partialFingerprints: {
         "skill-safe/category/v1": flag.category,
+        "skill-safe/rule/v1": ruleId,
         "skill-safe/document/v1": doc.id,
       },
       properties: {
+        ruleName: flag.ruleName,
         matched: flag.matched.slice(0, 500),
         normalized: flag.normalized ?? false,
         owasp: flag.owasp ?? [],
@@ -281,7 +286,7 @@ const buildResultsForDocument = (
 };
 
 export type ToSarifOptions = {
-  /** Tool version to embed. Defaults to "0.1.0". */
+  /** Tool version to embed. Defaults to the current package version. */
   version?: string;
 };
 
@@ -293,8 +298,9 @@ export const toSarifReport = (
   report: SkillSafeFullReport,
   options: ToSarifOptions = {},
 ): SarifLog => {
-  const version = options.version ?? "0.1.0";
+  const version = options.version ?? "0.2.1";
   const rules = buildRules();
+  const ruleIndexById = new Map(rules.map((rule, index) => [rule.id, index]));
 
   const artifacts: SarifArtifact[] = report.documents.map((doc) => ({
     location: { uri: buildArtifactUri(doc), uriBaseId: "%SRCROOT%" },
@@ -306,8 +312,8 @@ export const toSarifReport = (
     },
   }));
 
-  const results: SarifResult[] = report.documents.flatMap((doc, artifactIndex) =>
-    buildResultsForDocument(doc, artifactIndex),
+  const results: SarifResult[] = report.documents.flatMap((doc) =>
+    buildResultsForDocument(doc, ruleIndexById),
   );
 
   return {

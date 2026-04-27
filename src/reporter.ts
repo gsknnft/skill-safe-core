@@ -3,60 +3,12 @@ import type {
   SanitizationResult,
   SkillScanReport,
 } from "./sanitize.js";
-import type { SkillSourceKind } from "./resolver.js";
-import type { SkillTrustLevel } from "./trust.js";
-
-export type SkillSafeReportMode = "resolved-source" | "file" | "text" | "batch";
-
-export type SkillSafeDocumentReport = {
-  id: string;
-  source: string;
-  resolvedUrl: string | null;
-  sourceKind: SkillSourceKind | "file" | "text";
-  trust: SkillTrustLevel | "unknown";
-  directlyResolvable: boolean;
-  sanitized: boolean;
-  bytes: number;
-  lines: number;
-  scan: SanitizationResult;
-};
-
-export type SkillSafeReportSummary = {
-  safeToInstall: boolean;
-  recommendedAction: SkillScanReport["recommendedAction"];
-  severity: SanitizationResult["severity"];
-  riskScore: number;
-  documents: number;
-  passed: number;
-  review: number;
-  blocked: number;
-  findings: number;
-  danger: number;
-  caution: number;
-  hiddenContent: number;
-  normalizedMatches: number;
-};
-
-export type SkillSafeFullReport = {
-  version: "skill-safe.full-report.v1";
-  generatedAt: string;
-  mode: SkillSafeReportMode;
-  ok: boolean;
-  summary: SkillSafeReportSummary;
-  categories: Record<string, number>;
-  mappings: {
-    owasp: string[];
-    mitreAtlas: string[];
-    nistAiRmf: string[];
-  };
-  documents: SkillSafeDocumentReport[];
-};
-
-export type CreateSkillSafeReportOptions = {
-  mode: SkillSafeReportMode;
-  documents: SkillSafeDocumentReport[];
-  generatedAt?: string;
-};
+import type {
+  SkillSafeDocumentReport,
+  CreateSkillSafeReportOptions,
+  SkillSafeFullReport,
+  SkillSafeReportSummary,
+} from "./types.js";
 
 const actionRank: Record<SkillScanReport["recommendedAction"], number> = {
   allow: 0,
@@ -205,10 +157,14 @@ const formatFindingMarkdown = (
   full: boolean,
 ): string => {
   const lines = [
-    `${index + 1}. **[${flag.severity}] ${flag.category}**`,
+    `${index + 1}. **[${flag.severity}] ${flag.ruleId ?? flag.category} ${flag.category}**`,
     `   - ${flag.description}`,
     `   - Match: \`${truncate(flag.matched, full ? 500 : 120)}\``,
   ];
+  if (flag.ruleName) lines.push(`   - Rule: ${flag.ruleName}`);
+  if (flag.location) {
+    lines.push(`   - Location: line ${flag.location.line}, column ${flag.location.column}`);
+  }
   if (flag.normalized) lines.push("   - Normalized match: yes");
   if (full) {
     lines.push(`   - OWASP: ${formatList(flag.owasp ?? [])}`);
