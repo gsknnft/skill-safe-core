@@ -40,6 +40,76 @@ export type RuleDefinition = {
   nistAiRmf?: string[];
 };
 
+export type GovernanceMappings = {
+  owasp: string[];
+  mitreAtlas: string[];
+  nistAiRmf: string[];
+};
+
+export const CATEGORY_GOVERNANCE_MAPPINGS: Record<
+  SanitizationCategory,
+  GovernanceMappings
+> = {
+  "prompt-injection": {
+    owasp: [
+      "AST01 Malicious Skills",
+      "LLM01 Prompt Injection",
+    ],
+    mitreAtlas: ["AML.T0051 Prompt Injection", "AML.T0054 Indirect Prompt Injection"],
+    nistAiRmf: ["Measure", "Manage"],
+  },
+  "identity-hijack": {
+    owasp: ["AST01 Malicious Skills", "AST04 Insecure Metadata"],
+    mitreAtlas: ["AML.T0051 Prompt Injection"],
+    nistAiRmf: ["Map", "Measure"],
+  },
+  jailbreak: {
+    owasp: ["AST01 Malicious Skills", "LLM01 Prompt Injection"],
+    mitreAtlas: ["AML.T0051 Prompt Injection"],
+    nistAiRmf: ["Measure", "Manage"],
+  },
+  "data-exfiltration": {
+    owasp: ["AST01 Malicious Skills", "AST03 Over-Privileged Skills"],
+    mitreAtlas: ["Exfiltration"],
+    nistAiRmf: ["Measure", "Manage"],
+  },
+  "script-injection": {
+    owasp: ["AST01 Malicious Skills", "AST04 Insecure Metadata"],
+    mitreAtlas: ["Execution", "AI Agent Tool Abuse"],
+    nistAiRmf: ["Map", "Manage"],
+  },
+  "format-injection": {
+    owasp: ["AST04 Insecure Metadata", "LLM01 Prompt Injection"],
+    mitreAtlas: ["AML.T0051 Prompt Injection"],
+    nistAiRmf: ["Map", "Measure"],
+  },
+  "excessive-claims": {
+    owasp: ["AST03 Over-Privileged Skills"],
+    mitreAtlas: ["Privilege Escalation"],
+    nistAiRmf: ["Govern", "Manage"],
+  },
+  "hidden-content": {
+    owasp: ["AST01 Malicious Skills", "AST04 Insecure Metadata"],
+    mitreAtlas: ["AML.T0054 Indirect Prompt Injection"],
+    nistAiRmf: ["Map", "Measure"],
+  },
+  "hitl-bypass": {
+    owasp: ["AST03 Over-Privileged Skills", "Human-in-the-Loop Bypass"],
+    mitreAtlas: ["Privilege Escalation", "AI Agent Tool Abuse"],
+    nistAiRmf: ["Govern", "Manage"],
+  },
+  "package-age": {
+    owasp: ["AST02 Supply Chain Compromise", "LLM03 Supply Chain"],
+    mitreAtlas: ["Supply Chain Compromise"],
+    nistAiRmf: ["Map", "Govern", "Manage"],
+  },
+  "missing-provenance": {
+    owasp: ["AST02 Supply Chain Compromise", "LLM03 Supply Chain"],
+    mitreAtlas: ["Supply Chain Compromise"],
+    nistAiRmf: ["Map", "Govern", "Manage"],
+  },
+};
+
 export const RULES: RuleDefinition[] = [
 
   // ── Prompt injection ────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { RULES } from "./rules.js";
+import { CATEGORY_GOVERNANCE_MAPPINGS, RULES } from "./rules.js";
 import type { SanitizationCategory, SanitizationSeverity, RuleDefinition } from "./rules.js";
 
 export type { SanitizationCategory, SanitizationSeverity, RuleDefinition };
@@ -127,6 +127,16 @@ const excerptMatch = (content: string, index: number, matchLength: number): stri
 
 const uniqueSorted = (values: Array<string | undefined>): string[] =>
   [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
+
+const withDefaultMappings = (flag: SanitizationFlag): SanitizationFlag => {
+  const defaults = CATEGORY_GOVERNANCE_MAPPINGS[flag.category];
+  return {
+    ...flag,
+    owasp: flag.owasp ?? defaults.owasp,
+    mitreAtlas: flag.mitreAtlas ?? defaults.mitreAtlas,
+    nistAiRmf: flag.nistAiRmf ?? defaults.nistAiRmf,
+  };
+};
 
 const buildReport = (
   severity: "safe" | "caution" | "danger",
@@ -262,11 +272,13 @@ export const sanitizeSkillMarkdown = (
   const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";
   const safeToInstall = !hasDanger;
 
+  const mappedFlags = flags.map(withDefaultMappings);
+
   return {
     severity,
-    flags,
+    flags: mappedFlags,
     safeToInstall,
-    report: buildReport(severity, safeToInstall, flags),
+    report: buildReport(severity, safeToInstall, mappedFlags),
   };
 };
 
@@ -282,7 +294,7 @@ export const appendSanitizationFlags = (
 ): SanitizationResult => {
   if (additionalFlags.length === 0) return result;
 
-  const flags = [...additionalFlags, ...result.flags];
+  const flags = [...additionalFlags, ...result.flags].map(withDefaultMappings);
   const hasDanger = flags.some((flag) => flag.severity === "danger");
   const hasCaution = flags.some((flag) => flag.severity === "caution");
   const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";

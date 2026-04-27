@@ -26,6 +26,12 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
 - Added npm source policy support:
   - package minimum-age checks
   - optional provenance requirement checks
+- Added explicit governance mapping fields in reports:
+  - OWASP
+  - MITRE ATLAS
+  - NIST AI RMF
+- Added category-level default governance mappings so every finding category
+  contributes OWASP / MITRE ATLAS / NIST AI RMF context to reports.
 - Added new scan categories:
   - `package-age`
   - `missing-provenance`
@@ -71,8 +77,12 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
 - Prompt injection, identity hijack, jailbreak, data exfiltration, script
   injection, format injection, hidden content, HITL bypass, and excessive-claim
   rules.
+- Hidden content detection included zero-width/invisible Unicode checks,
+  Unicode escapes, HTML entities, spaced command/protocol words, and large
+  base64-like payload detection.
 - Composite "Lethal Trifecta" escalation.
 - Trust-level normalization for verified, managed, workspace, community, and
   unknown sources.
-- Structured `SkillScanReport` output.
+- Structured `SkillScanReport` output with governance mapping fields for OWASP,
+  MITRE ATLAS, and NIST AI RMF.
 - CLI entrypoint.

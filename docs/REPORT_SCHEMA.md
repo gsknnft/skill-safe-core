@@ -1,30 +1,29 @@
 # REPORT_SCHEMA.md
-**Canonical report contract for `@gsknnft/skill-safe` and all downstream consumers.**
-This schema is stable as of `v0.1.0` and must remain backward‑compatible for all future versions.
 
----
+Canonical report contract for `@gsknnft/skill-safe` and downstream consumers.
+This schema is stable as of `v0.2.0` and should remain backward-compatible for
+future `0.x` releases where practical.
 
 ## Overview
 
-A **Skill Scan Report** is the structured output produced by the static scanner.
-It is deterministic, dependency‑free, and safe for CI, marketplaces, and local agent UIs.
+A skill scan report is the structured output produced by the static scanner. The
+low-level `sanitizeSkillMarkdown()` scanner is deterministic, dependency-free,
+and performs no network calls or filesystem reads. Resolver and CLI helpers may
+fetch remote sources or read local files before passing content into the scanner.
 
-The report answers three questions:
+The report answers:
 
-1. **Is this skill safe to install?**
-2. **What issues were found?**
-3. **How should the consuming system respond?**
+1. Is this skill safe to install?
+2. What issues were found?
+3. How should the consuming system respond?
+4. Which governance/security contexts apply?
 
-This document defines the exact shape of that report.
-
----
-
-# 1. `SkillScanReport`
+## SkillScanReport
 
 ```ts
 type SkillScanReport = {
   version: "skill-safe.report.v1";
-  riskScore: number; // 0–100
+  riskScore: number;
   summary: {
     safeToInstall: boolean;
     severity: "safe" | "caution" | "danger";
@@ -41,22 +40,20 @@ type SkillScanReport = {
   };
   recommendedAction: "allow" | "review" | "block";
 };
-
 ```
 
-### Fields
+`safeToInstall` is true only when no danger-level findings exist.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `version` | `"skill-safe.report.v1"` | Stable schema version for the report. |
-| `riskScore` | `number` | 0–100 priority score for triage. |
-| `summary` | `object` | Aggregated install/severity/count summary. |
-| `categories` | `Partial<Record<SanitizationCategory, number>>` | Counts by finding category. |
-| `mappings` | `RiskMappings` | Cross-framework governance mappings. |
-| `recommendedAction` | `"allow" | "review" | "block"` | Recommended install/review decision. |
----
+`recommendedAction` is the install decision:
 
-# 2. `SanitizationResult`
+- `allow`: no meaningful risk detected
+- `review`: caution-level risk or policy review needed
+- `block`: danger-level finding or composite escalation
+
+`riskScore` is for triage. The install decision comes from
+`recommendedAction`.
+
+## SanitizationResult
 
 ```ts
 type SanitizationResult = {
@@ -67,64 +64,7 @@ type SanitizationResult = {
 };
 ```
 
-### Field Semantics
-
-### `safeToInstall`
-- `true` only when **no danger‑level findings** exist.
-- Workspace skills still require review if flagged.
-
-### `recommendedAction`
-- `"allow"` → No meaningful risk.
-- `"review"` → Medium risk or multiple low‑risk findings.
-- `"block"` → Any danger‑level finding or composite escalation.
-
-### `riskScore`
-
-`riskScore` is for prioritization. `recommendedAction` is the install decision: `allow`, `review`, or `block`.
-
-| Score | Meaning |
-|--------|---------|
-| `0` | No issues detected |
-| `1–34` | Low/moderate risk; review recommended |
-| `35–100` | Elevated risk; block if `recommendedAction === "block"`, otherwise review/escalate |
-
-### `flags`
-List of all findings.
-
-### `categories`
-Aggregated counts per category:
-
-- `prompt-injection`
-- `identity-hijack`
-- `jailbreak`
-- `data-exfiltration`
-- `script-injection`
-- `format-injection`
-- `hidden-content`
-- `hitl-bypass`
-- `composite-escalation`
-- etc.
-
-### `mappings`
-Cross‑framework mappings:
-
-```ts
-type RiskMappings = {
-  owasp: string[];
-  mitreAtlas: string[];
-  nistAiRmf: string[];
-};
-```
-
-These map findings to:
-
-- **OWASP Top 10 for Agentic Applications (2026)**
-- **MITRE ATLAS**
-- **NIST AI RMF**
-
----
-
-# 3. `SanitizationFlag`
+## SanitizationFlag
 
 ```ts
 type SanitizationFlag = {
@@ -139,110 +79,115 @@ type SanitizationFlag = {
 };
 ```
 
+`normalized` is present when the match was found only after de-obfuscation, such
+as zero-width removal, Unicode escape decoding, HTML entity decoding, or spaced
+command/protocol normalization.
 
-### Field Semantics
+## Categories
 
-- **`severity`** — `danger` blocks install; `caution` requires review.
-- **`category`** — One of the scanner’s rule categories.
-- **`description`** — Human-readable explanation.
-- **`matched`** — Short excerpt or display string for the matched content.
-- **`normalized`** — Present when the match was found after normalization/de-obfuscation.
-- **`owasp` / `mitreAtlas` / `nistAiRmf`** — Optional governance mappings for the finding.
+Current categories:
 
----
+- `prompt-injection`
+- `identity-hijack`
+- `jailbreak`
+- `data-exfiltration`
+- `script-injection`
+- `format-injection`
+- `excessive-claims`
+- `hidden-content`
+- `hitl-bypass`
+- `package-age`
+- `missing-provenance`
 
+Composite escalation is represented as a `prompt-injection` finding with the
+description `Composite risk: instruction override combined with network/code-execution vector`.
 
-# 4. `Marketplace Skill Scan`
+## Governance Mappings
+
+Findings carry OWASP, MITRE ATLAS, and NIST AI RMF mapping arrays. Rule-specific
+mappings override category defaults; otherwise category defaults are applied.
+
+Example finding:
+
+```json
+{
+  "severity": "danger",
+  "category": "prompt-injection",
+  "description": "Instructs the agent to ignore prior instructions.",
+  "matched": "ignore previous instructions",
+  "owasp": ["AST01 Malicious Skills", "LLM01 Prompt Injection"],
+  "mitreAtlas": ["AML.T0051 Prompt Injection", "AML.T0054 Indirect Prompt Injection"],
+  "nistAiRmf": ["Measure", "Manage"]
+}
+```
+
+Example top-level aggregation:
+
+```json
+{
+  "mappings": {
+    "owasp": ["AST01 Malicious Skills", "LLM01 Prompt Injection"],
+    "mitreAtlas": ["AML.T0051 Prompt Injection"],
+    "nistAiRmf": ["Measure", "Manage"]
+  }
+}
+```
+
+Category defaults:
+
+| Category | OWASP context | MITRE ATLAS context | NIST AI RMF context |
+| --- | --- | --- | --- |
+| `prompt-injection` | AST01 Malicious Skills, LLM01 Prompt Injection | AML.T0051 Prompt Injection, AML.T0054 Indirect Prompt Injection | Measure, Manage |
+| `jailbreak` | AST01 Malicious Skills, LLM01 Prompt Injection | AML.T0051 Prompt Injection | Measure, Manage |
+| `data-exfiltration` | AST01 Malicious Skills, AST03 Over-Privileged Skills | Exfiltration | Measure, Manage |
+| `script-injection` | AST01 Malicious Skills, AST04 Insecure Metadata | Execution / AI agent tool abuse | Map, Manage |
+| `hidden-content` | AST01 Malicious Skills, AST04 Insecure Metadata | AML.T0054 Indirect Prompt Injection | Map, Measure |
+| `hitl-bypass` | AST03 Over-Privileged Skills | Privilege escalation / AI agent tool abuse | Govern, Manage |
+| `package-age` | AST02 Supply Chain Compromise, LLM03 Supply Chain | Supply-chain compromise context | Map, Govern, Manage |
+| `missing-provenance` | AST02 Supply Chain Compromise, LLM03 Supply Chain | Supply-chain compromise context | Map, Govern, Manage |
+
+These labels are governance context, not a complete incident classification.
+Hosts can still use them for policy routing, review queues, SARIF dashboards, or
+marketplace trust badges.
+
+## SkillSafeFullReport
+
+Batch, file, text, and resolved-source scans can be wrapped in a full report:
 
 ```ts
-type MarketplaceSkillScan = {
-  skillId: string;
-  source: string;
-  trustLevel: SkillTrustLevel;
-  result: SanitizationResult;
+type SkillSafeFullReport = {
+  version: "skill-safe.full-report.v1";
+  generatedAt: string;
+  mode: "resolved-source" | "file" | "text" | "batch";
+  ok: boolean;
+  summary: SkillSafeReportSummary;
+  categories: Record<string, number>;
+  mappings: {
+    owasp: string[];
+    mitreAtlas: string[];
+    nistAiRmf: string[];
+  };
+  documents: SkillSafeDocumentReport[];
 };
 ```
 
----
+`ok` is true only when every document in the full report is safe to install.
 
+## Integration Requirements
 
-# 5. Trust-Level Interaction
+Consumers should:
 
-`resolveSkillTrustLevel(source, bundled)` maps raw source → normalized trust:
+1. Check `safeToInstall` and `recommendedAction`.
+2. Auto-install only when `recommendedAction === "allow"`.
+3. Require review for `review`.
+4. Block or quarantine on `block`.
+5. Preserve mapping arrays when converting to UI badges, SARIF, or marketplace
+   review artifacts.
 
-- `verified`
-- `managed`
-- `workspace`
-- `community`
-- `unknown`
+## Caveats
 
-`requiresSanitization(trust)` returns:
-
-- `true` for `workspace`, `community`, `unknown`
-- `false` for `verified`, `managed`
-
-**Note:** Workspace skills are mutable and should still be scanned.
-
----
-
-# 6. Integration Requirements
-
-Any consumer of `SkillScanReport` **must**:
-
-### 1. Check `safeToInstall`
-This is the primary gate.
-
-### 2. Respect `recommendedAction`
-Marketplace UIs should:
-
-- Auto‑install only when `"allow"`.
-- Require user review for `"review"`.
-- Block or quarantine on `"block"`.
-
-### 3. Preserve backward compatibility
-Future versions may add fields, but existing fields will not change shape.
-
-### 4. Handle all sources uniformly
-The schema supports:
-
-- Local/manual skills
-- GitHub imports
-- Unknown sources
-- Marketplace submissions
-- Claw3D/OpenClaw skill ingestion
-- souls.zip bundles
-- Agent harness skill loaders
-
----
-
-# 7. Caveats & Guarantees
-
-### Guarantees
-- Deterministic output
-- Zero dependencies
-- No network calls
-- No LLM inference
-- No filesystem reads beyond caller-provided content
-
-### Caveats
-- Static scanning cannot guarantee runtime safety
-- Semantic intent analysis belongs to `skill-safe-judge`
-- Behavioral enforcement belongs to `skill-safe-runtime`
-
----
-
-# 8. Versioning
-
-This schema is locked for:
-
-```
-@gsknnft/skill-safe v0.1.0
-```
-
-Any breaking change requires:
-
-- a major version bump
-- migration notes
-- updated marketplace integration docs
-
----
+- Static scanning cannot prove runtime safety.
+- Semantic intent review belongs to `skill-safe-judge`.
+- Behavioral enforcement belongs to `skill-safe-runtime`.
+- Remote resolver checks may require network access, but the core scanner does
+  not.
