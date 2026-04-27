@@ -1,5 +1,7 @@
 # @gsknnft/skill-safe
 
+<img src="public/logo.jpg" alt="Skill Safe Banner" width="600" style="max-width:100%;height:auto;display:block;margin:auto;" />
+
 Zero-dependency TypeScript sanitizer for agent skill markdown.
 
 `skill-safe` is a static pre-install gate. It scans skill files for prompt
@@ -126,13 +128,13 @@ Every scan returns both raw flags and a structured static report:
 const result = sanitizeSkillMarkdown(markdown);
 
 result.report.recommendedAction; // "allow" | "review" | "block"
-result.report.riskScore;         // 0-100
-result.report.mappings.owasp;    // governance labels for downstream tools
+result.report.riskScore; // 0-100
+result.report.mappings.owasp; // governance labels for downstream tools
 result.report.mappings.mitreAtlas;
 result.report.mappings.nistAiRmf;
 
-result.flags[0]?.ruleId;         // stable SS### rule ID when available
-result.flags[0]?.location;       // line/column/offset evidence when available
+result.flags[0]?.ruleId; // stable SS### rule ID when available
+result.flags[0]?.location; // line/column/offset evidence when available
 ```
 
 The report is designed for UI badges, marketplace review, CI output, and later
@@ -206,7 +208,10 @@ use for CI policy, marketplace review, and security dashboards:
   "category": "prompt-injection",
   "severity": "danger",
   "owasp": ["AST01 Malicious Skills", "LLM01 Prompt Injection"],
-  "mitreAtlas": ["AML.T0051 Prompt Injection", "AML.T0054 Indirect Prompt Injection"],
+  "mitreAtlas": [
+    "AML.T0051 Prompt Injection",
+    "AML.T0054 Indirect Prompt Injection"
+  ],
   "nistAiRmf": ["Measure", "Manage"]
 }
 ```
@@ -225,15 +230,15 @@ The top-level report aggregates those fields under `report.mappings`:
 
 Current category-level mapping intent:
 
-| skill-safe category | Governance context |
-| --- | --- |
-| `prompt-injection` | OWASP AST01 / LLM01, MITRE ATLAS prompt injection, NIST Measure/Manage |
-| `jailbreak` | OWASP AST01 / LLM01, MITRE ATLAS prompt injection, NIST Measure/Manage |
-| `data-exfiltration` | OWASP AST01 / AST03, MITRE exfiltration context, NIST Measure/Manage |
-| `script-injection` | OWASP AST01 / AST04, execution/tool-abuse context, NIST Map/Manage |
-| `hidden-content` | OWASP AST01 / AST04, MITRE indirect prompt injection, NIST Map/Measure |
-| `hitl-bypass` | OWASP AST03 and HITL bypass context, privilege/tool-abuse context, NIST Govern/Manage |
-| `package-age` / `missing-provenance` | OWASP AST02 / LLM03, supply-chain context, NIST Map/Govern/Manage |
+| skill-safe category                  | Governance context                                                                    |
+| ------------------------------------ | ------------------------------------------------------------------------------------- |
+| `prompt-injection`                   | OWASP AST01 / LLM01, MITRE ATLAS prompt injection, NIST Measure/Manage                |
+| `jailbreak`                          | OWASP AST01 / LLM01, MITRE ATLAS prompt injection, NIST Measure/Manage                |
+| `data-exfiltration`                  | OWASP AST01 / AST03, MITRE exfiltration context, NIST Measure/Manage                  |
+| `script-injection`                   | OWASP AST01 / AST04, execution/tool-abuse context, NIST Map/Manage                    |
+| `hidden-content`                     | OWASP AST01 / AST04, MITRE indirect prompt injection, NIST Map/Measure                |
+| `hitl-bypass`                        | OWASP AST03 and HITL bypass context, privilege/tool-abuse context, NIST Govern/Manage |
+| `package-age` / `missing-provenance` | OWASP AST02 / LLM03, supply-chain context, NIST Map/Govern/Manage                     |
 
 `skill-safe` keeps these labels as governance context rather than treating a
 static regex match as a complete incident classification. Hosts can still use
@@ -258,7 +263,10 @@ scanned even if they are not treated like community content in the UI.
 Community rule additions should usually only touch `src/rules.ts`.
 
 ```ts
-import { sanitizeSkillMarkdown, type RuleDefinition } from "@gsknnft/skill-safe";
+import {
+  sanitizeSkillMarkdown,
+  type RuleDefinition,
+} from "@gsknnft/skill-safe";
 
 const extraRules: RuleDefinition[] = [
   {
