@@ -14,78 +14,15 @@ import {
   relative,
   resolve,
 } from "node:path";
-import { computeContentIntegrity, type SourceIntegrity } from "./integrity.js";
+import { computeContentIntegrity } from "./integrity.js";
 import {
   createSkillSafeDocumentReport,
   createSkillSafeReport,
-  type SkillSafeDocumentReport,
-  type SkillSafeFullReport,
 } from "./reporter.js";
-import type { RuleDefinition } from "./rules.js";
-import { sanitizeSkillMarkdown } from "./sanitize.js";
 import { requiresSanitization, resolveSkillTrustLevel } from "./trust.js";
+import type { RuleDefinition, ScannedSkillFile, ScanSkillBatchResult, ScanSkillDirectoryOptions, ScanSkillFilesOptions } from "./types.js";
+import { sanitizeSkillMarkdown } from "./sanitize.js";
 
-export type ScanSkillFilesOptions = {
-  /**
-   * Root directory used to compute relative document IDs in the report.
-   * Defaults to process.cwd().
-   */
-  root?: string;
-  /**
-   * Treat every file as a specific trust source, such as "openclaw-workspace".
-   * Defaults to "workspace".
-   */
-  source?: string;
-  /**
-   * Whether the files are bundled/verified. When true, static sanitization is
-   * skipped and files are reported as allowed.
-   */
-  bundled?: boolean;
-  /** Additional rules appended to the built-in set. */
-  extraRules?: RuleDefinition[];
-  /**
-   * Compute source integrity for each file. Defaults to true.
-   */
-  computeIntegrity?: boolean;
-  /**
-   * Per-file source string override. Called with the absolute file path.
-   * Return null to use the default source.
-   */
-  resolveSource?: (filePath: string) => string | null;
-};
-
-export type ScanSkillDirectoryOptions = ScanSkillFilesOptions & {
-  /**
-   * File extensions to include when includeFileNames is null. Defaults to [".md"].
-   */
-  extensions?: string[];
-  /**
-   * Exact entrypoint file names to scan. Defaults to ["SKILL.md", "skill.md"].
-   * Set to null to scan by extension instead.
-   */
-  includeFileNames?: string[] | null;
-  /**
-   * Directory basenames to skip.
-   */
-  ignoreDirs?: string[];
-  /**
-   * Maximum recursion depth. 0 = only top-level files. Defaults to 10.
-   */
-  maxDepth?: number;
-};
-
-export type ScannedSkillFile = {
-  absolutePath: string;
-  relativePath: string;
-  source: string;
-  document: SkillSafeDocumentReport;
-  integrity: SourceIntegrity | null;
-};
-
-export type ScanSkillBatchResult = {
-  report: SkillSafeFullReport;
-  files: ScannedSkillFile[];
-};
 
 const DEFAULT_IGNORE_DIRS = new Set([
   "node_modules",

@@ -8,7 +8,6 @@ import
         createSkillSafeReport,
         formatSkillSafeReportMarkdown,
         stringifySkillSafeReportJson,
-        type SkillSafeFullReport,
     } from "./reporter.js";
 import
     {
@@ -19,6 +18,7 @@ import { sanitizeSkillMarkdown } from "./sanitize.js";
 import { stringifySkillSafeSarifJson } from "./sarif.js";
 import { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 import { requiresSanitization } from "./trust.js";
+import type { SkillSafeFullReport } from "./types.js";
 
 type Args = {
   source: string | null;

@@ -8,7 +8,14 @@
     "prompt-injection",
     "ai-safety",
     "markdown",
-    "llm-security"
+    "llm-security",
+    "jailbreak-detection",
+    "data-exfiltration",
+    "vulnerability-scanner",
+    "npm",
+    "github",
+    "cli",
+    "types"
   ],
   "author": "gsknnft",
   "license": "MIT",

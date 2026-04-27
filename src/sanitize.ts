@@ -4,7 +4,7 @@ import type {
   SanitizationSeverity,
   RuleDefinition,
   SkillRuleId,
-} from "./rules.js";
+} from "./types.js";
 
 export type { SanitizationCategory, SanitizationSeverity, RuleDefinition };
 

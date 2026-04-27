@@ -5,20 +5,8 @@
  * and all modern browsers. Zero external dependencies.
  */
 
-export type SourceIntegrity = {
-  /** SHA-256 hex digest of the raw markdown bytes. */
-  contentHash: string;
-  /** SHA-256 hex digest of the resolved URL string, or null if no URL. */
-  urlHash: string | null;
-  /** Resolved URL at scan time, or null. */
-  resolvedUrl: string | null;
-  /** ISO 8601 timestamp of when the integrity record was created. */
-  scannedAt: string;
-  /** Byte length of the content (UTF-8). */
-  bytes: number;
-  /** Algorithm used. Always "SHA-256" for now. */
-  algorithm: "SHA-256";
-};
+import type { SourceIntegrity } from "./types.js";
+
 
 const toHex = (buffer: ArrayBuffer): string => {
   const bytes = new Uint8Array(buffer);

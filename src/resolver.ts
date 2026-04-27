@@ -3,83 +3,21 @@ import
     appendSanitizationFlags,
     sanitizeSkillMarkdown,
     type SanitizationFlag,
-    type SanitizationResult,
   } from "./sanitize.js";
 import
   {
     requiresSanitization,
     resolveSkillTrustLevel,
-    type SkillTrustLevel,
   } from "./trust.js";
 
-export type SkillSourceKind =
-  | "github"
-  | "npm"
-  | "registry"
-  | "souls"
-  | "hermes"
-  | "openclaw"
-  | "workspace"
-  | "url"
-  | "unknown";
-
-export type GitHubSkillShorthand = {
-  owner: string;
-  repo: string;
-  branch: string;
-  path: string;
-};
-
-export type SkillSourceDescriptor = {
-  source: string;
-  kind: SkillSourceKind;
-  trust: SkillTrustLevel;
-  bundled: boolean;
-  value: string;
-  directlyResolvable: boolean;
-};
-
-export type ResolvedSkillMarkdown = SkillSourceDescriptor & {
-  resolvedUrl: string | null;
-  markdown: string;
-  /**
-   * Source-level flags injected before content analysis — e.g. age-gate or
-   * missing provenance. Empty array when not applicable.
-   */
-  sourceFlags: SanitizationFlag[];
-};
-
-export type ResolvedSkillScanReport = ResolvedSkillMarkdown & {
-  scan: SanitizationResult | null;
-};
-
-export type SkillSourceResolver = (
-  descriptor: SkillSourceDescriptor,
-) => Promise<string | { markdown: string; resolvedUrl?: string | null }>;
-
-export type NpmSourcePolicy = {
-  /**
-   * Minimum age in days a package version must have before it is trusted.
-   * Mitigates package-takeover and typosquatting attacks where a malicious
-   * version is published and immediately consumed by automated agents.
-   * Defaults to 2.
-   */
-  minAgeDays?: number;
-  /**
-   * When true, a `missing-provenance` flag is emitted if the registry has no
-   * OIDC/Sigstore attestation for the resolved version.
-   * Defaults to false (provenance check is a best-effort stub today).
-   */
-  requireProvenance?: boolean;
-};
-
-export type SkillResolverOptions = {
-  bundled?: boolean;
-  fetcher?: typeof fetch;
-  resolvers?: Partial<Record<SkillSourceKind, SkillSourceResolver>>;
-  /** Policy applied when resolving npm: sources. */
-  npmPolicy?: NpmSourcePolicy;
-};
+import type {
+  GitHubSkillShorthand,
+  NpmSourcePolicy,
+  ResolvedSkillMarkdown,
+  ResolvedSkillScanReport,
+  SkillResolverOptions,
+  SkillSourceDescriptor,
+} from "./types.js";
 
 const DEFAULT_MARKDOWN_CANDIDATES = [
   "SKILL.md",

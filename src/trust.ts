@@ -8,12 +8,7 @@
  * Trust levels are ordered: verified > managed > workspace > community > unknown
  */
 
-export type SkillTrustLevel =
-  | "verified"   // bundled with the app, reviewed and signed
-  | "managed"    // installed via official marketplace
-  | "workspace"  // from an agent's local workspace
-  | "community"  // external source (GitHub, registry, etc.)
-  | "unknown";   // unrecognized — treat as untrusted
+import type { SkillTrustLevel } from "./types.js";
 
 /**
  * Resolve a trust level from a raw skill source string.

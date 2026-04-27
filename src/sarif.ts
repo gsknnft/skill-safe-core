@@ -5,109 +5,19 @@
  * GitHub schema: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-github-code-scanning
  */
 
-import type { SkillSafeFullReport, SkillSafeDocumentReport } from "./reporter.js";
-import type { SanitizationFlag } from "./sanitize.js";
+import type { RuleDefinition, SanitizationCategory, SanitizationFlag } from "./sanitize.js";
 import { RULES } from "./rules.js";
-import type { RuleDefinition, SanitizationCategory } from "./rules.js";
+import type {
+  SarifResult,
+  SkillSafeDocumentReport,
+  SarifRule,
+  SarifLocation,
+  SkillSafeFullReport,
+  SarifLog,
+  SarifArtifact,
+  SarifRuleMeta,
+} from "./types.js";
 
-// ---------------------------------------------------------------------------
-// SARIF types (minimal subset for GitHub Code Scanning)
-// ---------------------------------------------------------------------------
-
-export type SarifLog = {
-  $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json";
-  version: "2.1.0";
-  runs: SarifRun[];
-};
-
-export type SarifRule = {
-  id: string;
-  name: string;
-  shortDescription: { text: string };
-  fullDescription: { text: string };
-  helpUri: string;
-  defaultConfiguration: { level: "error" | "warning" | "note" | "none" };
-  properties: {
-    tags: string[];
-    /** CVSS-like score string, 0.0–10.0, used by GitHub Advanced Security. */
-    "security-severity": string;
-    precision: "very-high" | "high" | "medium" | "low";
-    "problem.severity": "error" | "warning" | "recommendation";
-  };
-};
-
-export type SarifLocation = {
-  physicalLocation: {
-    artifactLocation: {
-      uri: string;
-      uriBaseId: "%SRCROOT%";
-    };
-    region: {
-      startLine: number;
-      startColumn?: number;
-      charOffset?: number;
-      byteOffset?: number;
-    };
-  };
-};
-
-export type SarifResult = {
-  ruleId: string;
-  ruleIndex: number;
-  level: "error" | "warning" | "note" | "none";
-  message: { text: string };
-  locations: SarifLocation[];
-  partialFingerprints?: Record<string, string>;
-  properties?: {
-    ruleName?: string;
-    matched?: string;
-    normalized?: boolean;
-    owasp?: string[];
-    mitreAtlas?: string[];
-    nistAiRmf?: string[];
-  };
-};
-
-export type SarifArtifact = {
-  location: { uri: string; uriBaseId: "%SRCROOT%" };
-  length: number;
-  mimeType: "text/markdown";
-  properties: { trustLevel: string; sourceKind: string };
-};
-
-export type SarifRun = {
-  tool: {
-    driver: {
-      name: "skill-safe";
-      version: string;
-      informationUri: string;
-      rules: SarifRule[];
-    };
-  };
-  results: SarifResult[];
-  artifacts: SarifArtifact[];
-  properties: {
-    "skill-safe:report": {
-      mode: string;
-      riskScore: number;
-      recommendedAction: string;
-    };
-  };
-};
-
-// ---------------------------------------------------------------------------
-// Category → SARIF rule mapping
-// ---------------------------------------------------------------------------
-
-type SarifRuleMeta = {
-  id: string;
-  name: string;
-  short: string;
-  full: string;
-  securitySeverity: string;
-  precision: SarifRule["properties"]["precision"];
-  category?: SanitizationCategory;
-};
 
 const CATEGORY_RULE_META: Record<SanitizationCategory, SarifRuleMeta> = {
   "prompt-injection": {
@@ -334,7 +244,6 @@ const buildRegion = (flag: SanitizationFlag): SarifLocation["physicalLocation"][
 
 const buildResultsForDocument = (
   doc: SkillSafeDocumentReport,
-  artifactIndex: number,
   ruleIndexById: Map<string, number>,
 ): SarifResult[] => {
   const uri = buildArtifactUri(doc);
@@ -377,7 +286,7 @@ const buildResultsForDocument = (
 };
 
 export type ToSarifOptions = {
-  /** Tool version to embed. Defaults to "0.1.0". */
+  /** Tool version to embed. Defaults to the current package version. */
   version?: string;
 };
 
@@ -389,7 +298,7 @@ export const toSarifReport = (
   report: SkillSafeFullReport,
   options: ToSarifOptions = {},
 ): SarifLog => {
-  const version = options.version ?? "0.1.0";
+  const version = options.version ?? "0.2.1";
   const rules = buildRules();
   const ruleIndexById = new Map(rules.map((rule, index) => [rule.id, index]));
 
@@ -403,8 +312,8 @@ export const toSarifReport = (
     },
   }));
 
-  const results: SarifResult[] = report.documents.flatMap((doc, artifactIndex) =>
-    buildResultsForDocument(doc, artifactIndex, ruleIndexById),
+  const results: SarifResult[] = report.documents.flatMap((doc) =>
+    buildResultsForDocument(doc, ruleIndexById),
   );
 
   return {

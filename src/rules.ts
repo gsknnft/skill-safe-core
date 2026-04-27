@@ -15,42 +15,12 @@
  *   - Add a comment above the rule explaining *why* it's flagged if it's non-obvious.
  */
 
-export type SanitizationCategory =
-  | "prompt-injection"
-  | "identity-hijack"
-  | "jailbreak"
-  | "data-exfiltration"
-  | "script-injection"
-  | "format-injection"
-  | "excessive-claims"
-  | "hidden-content"
-  | "hitl-bypass"
-  | "package-age"
-  | "missing-provenance";
+import type {
+  GovernanceMappings,
+  RuleDefinition,
+  SanitizationCategory,
+} from "./types.js";
 
-export type SanitizationSeverity = "caution" | "danger";
-
-export type SkillRuleId = `SS${string}`;
-
-export type RuleDefinition = {
-  /** Stable rule identifier. Built-in rules use SS001-style IDs. */
-  id?: SkillRuleId;
-  /** Stable short name for reports, SARIF, docs, and future suppressions. */
-  name?: string;
-  pattern: RegExp;
-  severity: SanitizationSeverity;
-  category: SanitizationCategory;
-  description: string;
-  owasp?: string[];
-  mitreAtlas?: string[];
-  nistAiRmf?: string[];
-};
-
-export type GovernanceMappings = {
-  owasp: string[];
-  mitreAtlas: string[];
-  nistAiRmf: string[];
-};
 
 export const CATEGORY_GOVERNANCE_MAPPINGS: Record<
   SanitizationCategory,
