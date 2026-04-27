@@ -3,3 +3,6 @@ dist/
 *.tgz
 .vite/
 .vite-temp/
+examples/reports/*.json
+examples/reports/*.md
+!examples/reports/.gitkeep

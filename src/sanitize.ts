@@ -122,7 +122,7 @@ const excerptMatch = (content: string, index: number, matchLength: number): stri
   const start = Math.max(0, index - 20);
   const end   = Math.min(content.length, index + matchLength + CONTEXT);
   const raw   = content.slice(start, end).replace(/\s+/g, " ").trim();
-  return end < content.length ? `${raw}…` : raw;
+  return end < content.length ? `${raw}...` : raw;
 };
 
 const uniqueSorted = (values: Array<string | undefined>): string[] =>
@@ -259,6 +259,32 @@ export const sanitizeSkillMarkdown = (
   const hasDanger  = flags.some((f) => f.severity === "danger");
   const hasCaution = flags.some((f) => f.severity === "caution");
 
+  const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";
+  const safeToInstall = !hasDanger;
+
+  return {
+    severity,
+    flags,
+    safeToInstall,
+    report: buildReport(severity, safeToInstall, flags),
+  };
+};
+
+/**
+ * Return a new scan result with additional synthetic/source-level flags merged
+ * into the normal content findings. This is used for resolver findings such as
+ * npm package age or missing provenance without making callers special-case
+ * source security checks.
+ */
+export const appendSanitizationFlags = (
+  result: SanitizationResult,
+  additionalFlags: SanitizationFlag[],
+): SanitizationResult => {
+  if (additionalFlags.length === 0) return result;
+
+  const flags = [...additionalFlags, ...result.flags];
+  const hasDanger = flags.some((flag) => flag.severity === "danger");
+  const hasCaution = flags.some((flag) => flag.severity === "caution");
   const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";
   const safeToInstall = !hasDanger;
 

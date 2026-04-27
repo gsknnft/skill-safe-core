@@ -1,6 +1,6 @@
 {
   "name": "@gsknnft/skill-safe",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Zero-dependency skill sanitizer — scans agent skill markdown for prompt injection, jailbreaks, data exfiltration, and other red flags before installation.",
   "keywords": [
     "agent-skills",
@@ -17,6 +17,9 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "skill-safe": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -33,11 +36,36 @@
       "import": "./dist/trust.js",
       "default": "./dist/trust.js"
     },
+    "./resolver": {
+      "types": "./dist/resolver.d.ts",
+      "import": "./dist/resolver.js",
+      "default": "./dist/resolver.js"
+    },
+    "./scanner": {
+      "types": "./dist/scanner.d.ts",
+      "import": "./dist/scanner.js",
+      "default": "./dist/scanner.js"
+    },
+    "./sarif": {
+      "types": "./dist/sarif.d.ts",
+      "import": "./dist/sarif.js",
+      "default": "./dist/sarif.js"
+    },
+    "./integrity": {
+      "types": "./dist/integrity.d.ts",
+      "import": "./dist/integrity.js",
+      "default": "./dist/integrity.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "docs",
+    "examples/README.md",
+    "examples/full-report.mjs",
+    "examples/fixtures",
+    "examples/skills",
+    "examples/reports/.gitkeep",
     "package.json",
     "README.md",
     "CHANGELOG.md",
@@ -59,6 +87,10 @@
     "build": "pnpm clean && tsc -p tsconfig.build.json",
     "tsc:noemit": "tsc -b --noEmit",
     "test": "vitest run",
+    "example:smoke": "pnpm build && node examples/full-report.mjs",
+    "example:json": "pnpm build && node dist/cli.js --file examples/fixtures/malicious-skill.md --json --fail-on never",
+    "example:markdown": "pnpm build && node dist/cli.js --file examples/fixtures/malicious-skill.md --full --fail-on never",
+    "example:batch": "pnpm build && node dist/cli.js examples/skills --json --fail-on never",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\""
   },
   "devDependencies": {

@@ -24,7 +24,9 @@ export type SanitizationCategory =
   | "format-injection"
   | "excessive-claims"
   | "hidden-content"
-  | "hitl-bypass";
+  | "hitl-bypass"
+  | "package-age"
+  | "missing-provenance";
 
 export type SanitizationSeverity = "caution" | "danger";
 
