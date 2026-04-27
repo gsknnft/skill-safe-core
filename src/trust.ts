@@ -3,7 +3,7 @@
  *
  * Maps any skill source string to a normalized trust level — handles
  * openclaw-* conventions AND generic external sources (GitHub, souls.zip,
- * HashLips, hermes-agent, custom registries, etc.).
+ * hermes-agent, custom registries, etc.).
  *
  * Trust levels are ordered: verified > managed > workspace > community > unknown
  */
@@ -51,7 +51,6 @@ export const resolveSkillTrustLevel = (
     s.startsWith("registry:") ||
     s.startsWith("souls:") ||
     s.startsWith("hermes:") ||
-    s.startsWith("hashlips:") ||
     s.startsWith("npm:")
   ) return "community";
   return "unknown";

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import {
-  describeSkillSource,
-  parseGithubShorthand,
-  parseHashLipsShorthand,
-  resolveAndScanSkillMarkdown,
-  resolveGithubRawUrl,
-  resolveSkillMarkdown,
-} from "../src/resolver";
+import
+    {
+        describeSkillSource,
+        parseGithubShorthand,
+        resolveAndScanSkillMarkdown,
+        resolveGithubRawUrl,
+        resolveSkillMarkdown,
+    } from "../src/resolver";
 
 describe("GitHub resolver", () => {
   it("parses owner and repo with default branch and no path", () => {
@@ -48,7 +48,7 @@ describe("source descriptors", () => {
     ["agents-skills-local", "workspace", "workspace", false],
     ["openclaw-extra", "openclaw", "community", false],
     ["github:HashLips/agent-skills", "github", "community", true],
-    ["hashlips:agent-skills", "hashlips", "community", true],
+    ["hashlips:agent-skills", "github", "community", true],
     ["npm:@gsknnft/skill-safe", "npm", "community", true],
     ["registry:https://example.com/SKILL.md", "registry", "community", true],
     ["souls:abc123", "souls", "community", false],
@@ -66,8 +66,16 @@ describe("source descriptors", () => {
     },
   );
 
-  it("parses HashLips shorthand through GitHub semantics", () => {
-    expect(parseHashLipsShorthand("hashlips:agent-skills@dev/docs/SKILL.md")).toEqual({
+  it("parses hashlips: shorthand as github:HashLips/", () => {
+    expect(parseGithubShorthand("github:HashLips/agent-skills@dev/docs/SKILL.md")).toEqual({
+      owner: "HashLips",
+      repo: "agent-skills",
+      branch: "dev",
+      path: "docs/SKILL.md",
+    });
+    // Universal: hashlips: is mapped to github:HashLips/
+    const desc = describeSkillSource("hashlips:agent-skills@dev/docs/SKILL.md");
+    expect(parseGithubShorthand(desc.source)).toEqual({
       owner: "HashLips",
       repo: "agent-skills",
       branch: "dev",

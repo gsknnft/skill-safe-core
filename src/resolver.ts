@@ -1,18 +1,19 @@
-import {
-  appendSanitizationFlags,
-  sanitizeSkillMarkdown,
-  type SanitizationFlag,
-  type SanitizationResult,
-} from "./sanitize.js";
-import {
-  requiresSanitization,
-  resolveSkillTrustLevel,
-  type SkillTrustLevel,
-} from "./trust.js";
+import
+  {
+    appendSanitizationFlags,
+    sanitizeSkillMarkdown,
+    type SanitizationFlag,
+    type SanitizationResult,
+  } from "./sanitize.js";
+import
+  {
+    requiresSanitization,
+    resolveSkillTrustLevel,
+    type SkillTrustLevel,
+  } from "./trust.js";
 
 export type SkillSourceKind =
   | "github"
-  | "hashlips"
   | "npm"
   | "registry"
   | "souls"
@@ -131,15 +132,16 @@ export function parseGithubShorthand(input: string) {
 }
 
 
-export function parseHashLipsShorthand(input: string): GitHubSkillShorthand {
-  if (!input.startsWith("hashlips:")) {
-    throw new Error("Not a HashLips shorthand");
+export function parseShorthand(input: string): GitHubSkillShorthand {
+  if (!input.includes(":")) {
+    throw new Error("Not a valid shorthand");
   }
-  const value = stripPrefix(input, "hashlips:");
-  const repoSource = value.includes("/")
-    ? `github:HashLips/${value}`
-    : `github:HashLips/${assertNonEmpty(value, "repo")}`;
-  return parseGithubShorthand(repoSource);
+  // Accepts "github:owner/repo[@branch][/path]"
+  if (input.startsWith("github:")) {
+    return parseGithubShorthand(input);
+  }
+  // Optionally, handle other prefixes or throw for unsupported ones
+  throw new Error("Unsupported shorthand prefix");
 }
 
 export function resolveGithubRawUrl(input: string): string {
@@ -150,10 +152,10 @@ export function resolveGithubRawUrl(input: string): string {
 
 export const resolveGithubUrl = resolveGithubRawUrl;
 
-export function resolveHashLipsRawUrl(input: string): string {
-  const parsed = parseHashLipsShorthand(input);
-  const markdownPath = parsed.path || DEFAULT_MARKDOWN_CANDIDATES[0];
-  return `https://raw.githubusercontent.com/HashLips/${encodeURIComponent(parsed.repo)}/${encodeURIComponent(parsed.branch)}/${markdownPath}`;
+export function resolveUserRawUrl(input: string): string {
+  const { owner, repo, branch, path } = parseShorthand(input);
+  const markdownPath = path || DEFAULT_MARKDOWN_CANDIDATES[0];
+  return `https://raw.githubusercontent.com/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${encodeURIComponent(branch)}/${markdownPath}`;
 }
 
 const isHttpUrl = (value: string): boolean => {
@@ -184,13 +186,14 @@ export function describeSkillSource(
       directlyResolvable: true,
     };
   }
+  // Treat hashlips:repo as github:HashLips/repo
   if (lower.startsWith("hashlips:")) {
     return {
-      source: trimmed,
-      kind: "hashlips",
+      source: `github:HashLips/${stripPrefix(trimmed, "hashlips:")}`,
+      kind: "github",
       trust,
       bundled,
-      value: stripPrefix(trimmed, "hashlips:"),
+      value: `HashLips/${stripPrefix(trimmed, "hashlips:")}`,
       directlyResolvable: true,
     };
   }
@@ -450,11 +453,6 @@ async function resolveDirectMarkdown(
     case "github":
       return fetchFirstMarkdown(
         githubCandidateUrls(parseGithubShorthand(descriptor.source)),
-        fetcher,
-      );
-    case "hashlips":
-      return fetchFirstMarkdown(
-        githubCandidateUrls(parseHashLipsShorthand(descriptor.source)),
         fetcher,
       );
     case "npm":

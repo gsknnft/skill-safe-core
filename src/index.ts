@@ -44,8 +44,8 @@ export type {
 export {
   describeSkillSource,
   parseGithubShorthand,
-  parseHashLipsShorthand,
-  resolveHashLipsRawUrl,
+  parseShorthand,
+  resolveUserRawUrl,
   resolveGithubRawUrl,
   resolveGithubUrl,
   resolveSkillMarkdown,
