@@ -1,4 +1,5 @@
-import { CATEGORY_GOVERNANCE_MAPPINGS, RULES } from "./rules.js";
+import { RULES } from "./rules.js";
+import { getCategoryReportArrays } from "./mappings.js";
 import type {
   SanitizationCategory,
   SanitizationSeverity,
@@ -172,7 +173,7 @@ const uniqueSorted = (values: Array<string | undefined>): string[] =>
   [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
 
 const withDefaultMappings = (flag: SanitizationFlag): SanitizationFlag => {
-  const defaults = CATEGORY_GOVERNANCE_MAPPINGS[flag.category];
+  const defaults = getCategoryReportArrays(flag.category);
   return {
     ...flag,
     owasp: flag.owasp ?? defaults.owasp,

@@ -39,6 +39,13 @@ export { computeContentIntegrity, toSriString } from "./integrity.js";
 
 export { toSarifReport, stringifySkillSafeSarifJson } from "./sarif.js";
 
+export {
+  CATEGORY_MAPPINGS,
+  getMappingsForCategory,
+  toReportArrays,
+  getCategoryReportArrays,
+} from "./mappings.js";
+
 export { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 
 export type { ToSarifOptions } from "./sarif.js";
@@ -77,3 +84,5 @@ export type {
   ScanSkillFilesOptions,
   ScannedSkillFile,
 } from "./types.js";
+
+export type { GovernanceFramework, MappingConfidence, GovernanceMapping } from "./mappings.js";
