@@ -205,10 +205,14 @@ const formatFindingMarkdown = (
   full: boolean,
 ): string => {
   const lines = [
-    `${index + 1}. **[${flag.severity}] ${flag.category}**`,
+    `${index + 1}. **[${flag.severity}] ${flag.ruleId ?? flag.category} ${flag.category}**`,
     `   - ${flag.description}`,
     `   - Match: \`${truncate(flag.matched, full ? 500 : 120)}\``,
   ];
+  if (flag.ruleName) lines.push(`   - Rule: ${flag.ruleName}`);
+  if (flag.location) {
+    lines.push(`   - Location: line ${flag.location.line}, column ${flag.location.column}`);
+  }
   if (flag.normalized) lines.push("   - Normalized match: yes");
   if (full) {
     lines.push(`   - OWASP: ${formatList(flag.owasp ?? [])}`);

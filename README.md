@@ -12,6 +12,32 @@ It is not a sandbox. A safe scan result means no known static red flags were
 found; runtime permissions, tool allowlists, filesystem isolation, network
 policy, and human review still matter.
 
+## Why skill-safe
+
+`skill-safe` is a small deterministic first gate for agent skill markdown.
+
+It is intentionally narrower than full agent-security platforms. It does not run
+skills, sandbox tools, call an LLM, or inventory every agent runtime on the
+machine. Instead, it gives marketplaces, local agent UIs, and CI workflows a
+fast static pre-install check that can run before a skill is trusted.
+
+Core differences:
+
+- zero runtime dependencies
+- deterministic scan results
+- library-first API plus CLI
+- recursive `SKILL.md` batch scanning
+- source trust normalization
+- npm package age and provenance policy hooks
+- hidden-content detection including zero-width/invisible Unicode
+- stable `SS###` rule IDs with line/column evidence
+- full JSON, Markdown, and SARIF report output
+- OWASP / MITRE ATLAS / NIST AI RMF mapping context on findings
+
+Use `skill-safe` as the first gate. Pair it with runtime sandboxing, tool
+allowlists, human approval, and optional semantic review for a complete defense
+layer.
+
 ## Install
 
 ```sh
@@ -104,6 +130,9 @@ result.report.riskScore;         // 0-100
 result.report.mappings.owasp;    // governance labels for downstream tools
 result.report.mappings.mitreAtlas;
 result.report.mappings.nistAiRmf;
+
+result.flags[0]?.ruleId;         // stable SS### rule ID when available
+result.flags[0]?.location;       // line/column/offset evidence when available
 ```
 
 The report is designed for UI badges, marketplace review, CI output, and later

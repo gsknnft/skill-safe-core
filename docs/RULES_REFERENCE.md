@@ -6,17 +6,18 @@ This document catalogs all static analysis rules used by `@gsknnft/skill-safe`.
 
 | Rule ID                | Category             | Severity   | Description                                      | Example Match/Excerpt         |
 |------------------------|---------------------|------------|--------------------------------------------------|-------------------------------|
-| prompt-injection       | prompt-injection    | danger     | Detects prompt injection attempts                | "Ignore previous instructions"|
-| identity-hijack        | identity-hijack     | high       | Attempts to impersonate or override agent ID     | "You are now..."             |
-| jailbreak              | jailbreak           | high       | Attempts to bypass system restrictions           | "Disregard all prior rules"   |
-| data-exfiltration      | data-exfiltration   | high       | Attempts to leak or export sensitive data        | "Send the file to..."         |
-| script-injection       | script-injection    | danger     | Embeds or executes scripts/code                  | "<script>...</script>"        |
-| format-injection       | format-injection    | medium     | Malicious formatting or encoding tricks          | "\u202E" (RTL override)       |
-| hidden-content         | hidden-content      | medium     | Invisible or obfuscated content                  | "\u200B" (zero-width space)   |
-| hitl-bypass            | hitl-bypass         | high       | Attempts to bypass human-in-the-loop controls    | "Do not show this to a human"  |
-| package-age            | package-age         | danger     | npm package version is newer than the minimum age policy | recently published npm version |
-| missing-provenance     | missing-provenance  | caution    | npm package lacks required provenance attestation | package metadata without attestation |
-| composite-escalation   | composite-escalation| danger     | Multiple findings that together escalate risk    | N/A                           |
+| SS001-SS006            | prompt-injection    | danger     | Detects prompt injection attempts                | "Ignore previous instructions"|
+| SS010-SS014            | identity-hijack     | caution/danger | Attempts to impersonate or override agent ID | "You are now..."             |
+| SS020-SS025            | jailbreak           | danger     | Attempts to bypass system restrictions           | "Disregard all prior rules"   |
+| SS030-SS038            | data-exfiltration   | caution/danger | Attempts to leak or export sensitive data    | "Send the file to..."         |
+| SS040-SS045            | script-injection    | caution/danger | Embeds or executes scripts/code              | "<script>...</script>"        |
+| SS050-SS052            | format-injection    | caution/danger | Malicious formatting or encoding tricks      | raw role/control tokens        |
+| SS060-SS063            | excessive-claims    | caution/danger | Overstates privileges or disables guardrails | "unrestricted access"         |
+| SS070-SS072            | hitl-bypass         | danger     | Attempts to bypass human-in-the-loop controls    | "self-approve all tool calls" |
+| SS080-SS082            | hidden-content      | caution/danger | Invisible or obfuscated content              | "\u200B" (zero-width space)   |
+| SS900                  | prompt-injection    | danger     | Multiple findings that together escalate risk    | Lethal Trifecta composite      |
+| SS901                  | package-age         | danger     | npm package version is newer than the minimum age policy | recently published npm version |
+| SS902                  | missing-provenance  | caution    | npm package lacks required provenance attestation | package metadata without attestation |
 
 ## Rationale
 Each rule is designed to catch a class of attacks or unsafe behaviors relevant to agent skills. Rules may be updated as new threats emerge.

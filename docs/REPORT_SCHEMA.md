@@ -68,16 +68,28 @@ type SanitizationResult = {
 
 ```ts
 type SanitizationFlag = {
+  ruleId?: string;
+  ruleName?: string;
   severity: "caution" | "danger";
   category: SanitizationCategory;
   description: string;
   matched: string;
   normalized?: boolean;
+  location?: {
+    line: number;
+    column: number;
+    offset: number;
+    byteOffset: number;
+  };
   owasp?: string[];
   mitreAtlas?: string[];
   nistAiRmf?: string[];
 };
 ```
+
+`ruleId` is a stable `SS###` identifier for built-in rules and synthetic
+source checks. `location` is present when a finding came from scanned content
+and includes 1-based line/column plus UTF-16 and UTF-8 offsets.
 
 `normalized` is present when the match was found only after de-obfuscation, such
 as zero-width removal, Unicode escape decoding, HTML entity decoding, or spaced

@@ -7,6 +7,8 @@ This document describes the SARIF output format for `@gsknnft/skill-safe`.
 
 ## Mapping
 - Each `SanitizationFlag` is mapped to a SARIF `result`.
+- Built-in findings use stable `SS###` rule IDs when available.
+- Category fallback metadata is still emitted for custom rules without IDs.
 - Rule metadata is mapped to SARIF `rules`.
 - The overall `SkillScanReport` is mapped to a SARIF `run`.
 
@@ -19,10 +21,22 @@ This document describes the SARIF output format for `@gsknnft/skill-safe`.
       "tool": { "driver": { "name": "skill-safe-core" } },
       "results": [
         {
-          "ruleId": "prompt-injection",
+          "ruleId": "SS001",
           "level": "error",
-          "message": { "text": "Prompt injection detected: 'Ignore previous instructions'" },
-          "locations": [ { "physicalLocation": { "artifactLocation": { "uri": "skill.md" } } } ]
+          "message": { "text": "[SS001] Instructs the agent to ignore prior instructions. - matched: Ignore previous instructions" },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": { "uri": "skill.md" },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 1,
+                  "charOffset": 186,
+                  "byteOffset": 186
+                }
+              }
+            }
+          ]
         }
       ]
     }
@@ -31,4 +45,6 @@ This document describes the SARIF output format for `@gsknnft/skill-safe`.
 ```
 
 ## Enabling SARIF Output
-- Use the CLI flag `--sarif` or set `outputFormat: 'sarif'` in the API.
+
+Use the CLI flag `--sarif` or call `toSarifReport()` /
+`stringifySkillSafeSarifJson()` from the library API.

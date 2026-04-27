@@ -2,12 +2,14 @@ export type {
   SanitizationCategory,
   SanitizationSeverity,
   RuleDefinition,
+  SkillRuleId,
 } from "./rules.js";
 
 export { RULES } from "./rules.js";
 
 export type {
   SanitizationFlag,
+  SanitizationLocation,
   SanitizationResult,
   SkillScanReport,
 } from "./sanitize.js";

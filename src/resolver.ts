@@ -102,7 +102,7 @@ export function parseGithubShorthand(input: string) {
   if (!input.startsWith("github:")) throw new Error("Not a github: source");
   const cleaned = input.slice("github:".length);
   const firstSlash = cleaned.indexOf("/");
-  if (firstSlash === -1) throw new Error("Invalid github shorthand, expected owner/repo");
+  if (firstSlash === -1) throw new Error("Invalid github shorthand, expected github:owner/repo");
 
   const owner = cleaned.slice(0, firstSlash);
   const rest = cleaned.slice(firstSlash + 1); // repo[@branch][/path]
@@ -188,10 +188,11 @@ export function describeSkillSource(
   }
   // Treat hashlips:repo as github:HashLips/repo
   if (lower.startsWith("hashlips:")) {
+    const githubSource = `github:HashLips/${stripPrefix(trimmed, "hashlips:")}`;
     return {
-      source: `github:HashLips/${stripPrefix(trimmed, "hashlips:")}`,
+      source: githubSource,
       kind: "github",
-      trust,
+      trust: resolveSkillTrustLevel(githubSource, bundled),
       bundled,
       value: `HashLips/${stripPrefix(trimmed, "hashlips:")}`,
       directlyResolvable: true,
@@ -411,6 +412,8 @@ function buildNpmSourceFlags(
     const ageDays = ageMs / 86_400_000;
     if (ageDays < minAgeDays) {
       flags.push({
+        ruleId: "SS901",
+        ruleName: "npm-package-age-gate",
         severity: "danger",
         category: "package-age",
         description: `npm package "${packageSpec}" was published ${ageDays.toFixed(1)} day(s) ago — below the ${minAgeDays}-day minimum. This is a high-risk window for supply-chain attacks.`,
@@ -423,6 +426,8 @@ function buildNpmSourceFlags(
 
   if (policy.requireProvenance && !meta.hasAttestation) {
     flags.push({
+      ruleId: "SS902",
+      ruleName: "npm-missing-provenance",
       severity: "caution",
       category: "missing-provenance",
       description: `npm package "${packageSpec}" has no OIDC/Sigstore provenance attestation in the registry. Build origin cannot be verified.`,

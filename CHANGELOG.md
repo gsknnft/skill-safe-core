@@ -2,6 +2,19 @@
 
 All notable changes to `@gsknnft/skill-safe` are documented here.
 
+## 0.2.1 - 2026-04-27
+
+### Added
+
+- Added stable `SS###` rule IDs and short rule names for every built-in static
+  rule.
+- Added source-level synthetic rule IDs for invisible-content, composite-risk,
+  npm package age, and missing-provenance findings.
+- Added line, column, UTF-16 offset, and UTF-8 byte offset evidence to
+  content-backed findings.
+- Added rule IDs and location regions to SARIF output.
+- Added rule/location details to Markdown reports.
+
 ## 0.2.0 - 2026-04-26
 
 ### Added

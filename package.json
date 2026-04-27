@@ -1,6 +1,6 @@
 {
   "name": "@gsknnft/skill-safe",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Zero-dependency skill sanitizer — scans agent skill markdown for prompt injection, jailbreaks, data exfiltration, and other red flags before installation.",
   "keywords": [
     "agent-skills",
