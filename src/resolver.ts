@@ -96,41 +96,40 @@ const assertNonEmpty = (value: string, label: string): string => {
 const stripPrefix = (source: string, prefix: string): string =>
   source.slice(prefix.length).trim();
 
-export function parseGithubShorthand(input: string): GitHubSkillShorthand {
-  if (!input.startsWith("github:")) {
-    throw new Error("Not a GitHub shorthand");
-  }
-
-  const cleaned = stripPrefix(input, "github:");
+// parseGithubShorthand.ts
+export function parseGithubShorthand(input: string) {
+  if (!input.startsWith("github:")) throw new Error("Not a github: source");
+  const cleaned = input.slice("github:".length);
   const firstSlash = cleaned.indexOf("/");
-  if (firstSlash === -1) {
-    throw new Error(
-      "Invalid GitHub shorthand: expected github:owner/repo[@branch][/path]",
-    );
+  if (firstSlash === -1) throw new Error("Invalid github shorthand, expected owner/repo");
+
+  const owner = cleaned.slice(0, firstSlash);
+  const rest = cleaned.slice(firstSlash + 1); // repo[@branch][/path]
+
+  let repo = rest;
+  let branch = "main";
+  let path = "";
+
+  const slashAfterRepo = rest.indexOf("/");
+  const atIndex = rest.indexOf("@");
+
+  if (atIndex !== -1 && (slashAfterRepo === -1 || atIndex < slashAfterRepo)) {
+    repo = rest.slice(0, atIndex);
+    const afterAt = rest.slice(atIndex + 1);
+    const nextSlash = afterAt.indexOf("/");
+    if (nextSlash === -1) branch = afterAt;
+    else {
+      branch = afterAt.slice(0, nextSlash);
+      path = afterAt.slice(nextSlash + 1);
+    }
+  } else if (slashAfterRepo !== -1) {
+    repo = rest.slice(0, slashAfterRepo);
+    path = rest.slice(slashAfterRepo + 1);
   }
 
-  const owner = assertNonEmpty(cleaned.slice(0, firstSlash), "owner");
-  const rest = assertNonEmpty(cleaned.slice(firstSlash + 1), "repo");
-  const slashIndex = rest.indexOf("/");
-  const repoAndBranch = slashIndex === -1 ? rest : rest.slice(0, slashIndex);
-  const explicitPath = slashIndex === -1 ? "" : rest.slice(slashIndex + 1);
-  const atIndex = repoAndBranch.indexOf("@");
-  const repo = assertNonEmpty(
-    atIndex === -1 ? repoAndBranch : repoAndBranch.slice(0, atIndex),
-    "repo",
-  );
-  const branch = assertNonEmpty(
-    atIndex === -1 ? "main" : repoAndBranch.slice(atIndex + 1),
-    "branch",
-  );
-
-  return {
-    owner,
-    repo,
-    branch,
-    path: explicitPath.trim(),
-  };
+  return { owner, repo, branch, path };
 }
+
 
 export function parseHashLipsShorthand(input: string): GitHubSkillShorthand {
   if (!input.startsWith("hashlips:")) {
