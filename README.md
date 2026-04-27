@@ -1,5 +1,7 @@
 # @gsknnft/skill-safe
 
+A lightweight static scanner for agent skill markdown before install.
+
 <img src="public/logo.jpg" alt="Skill Safe Banner" width="600" style="max-width:100%;height:auto;display:block;margin:auto;alignment:centered" />
 
 Zero-dependency TypeScript sanitizer for agent skill markdown.
