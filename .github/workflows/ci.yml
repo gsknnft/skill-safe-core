@@ -1,0 +1,44 @@
+name: skill-safe CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "dev/**"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test
+
+      - name: Validate mappings
+        run: pnpm validate:mappings
+
+      - name: Example batch scan
+        run: pnpm example:batch
+
+      - name: Pack dry-run
+        run: pnpm pack --dry-run

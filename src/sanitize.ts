@@ -243,17 +243,49 @@ export const parseSuppressions = (content: string): SanitizationSuppression[] =>
 // ---------------------------------------------------------------------------
 
 /**
+ * Controls how `<!-- skill-safe-ignore SS001: reason -->` comments are treated.
+ *
+ * - `"disabled"`     — suppression comments are not parsed at all.
+ * - `"report-only"`  — comments are parsed and surfaced on the result, but all
+ *                      flags are still reported. Safe default for untrusted content.
+ * - `"honor"`        — matching rule IDs are filtered from the flag list. Only
+ *                      use for workspace/verified sources where the author is trusted.
+ */
+export type SuppressionMode = "disabled" | "report-only" | "honor";
+
+export type SanitizationOptions = {
+  /** Additional rules appended to the built-in set. */
+  extraRules?: RuleDefinition[];
+  /**
+   * Controls suppression comment behavior.
+   * Defaults to `"report-only"` — suppressions are parsed and surfaced but
+   * never applied when scanning untrusted content.
+   */
+  suppressionMode?: SuppressionMode;
+};
+
+/**
  * Scan skill markdown content for red flags.
  *
  * @param content - Raw markdown string (YAML frontmatter + body)
- * @param extraRules - Optional additional rules to append (for custom extensions)
+ * @param extraRulesOrOptions - Additional rules (legacy positional) or options object
  */
 export const sanitizeSkillMarkdown = (
   content: string,
-  extraRules: RuleDefinition[] = [],
+  extraRulesOrOptions: RuleDefinition[] | SanitizationOptions = [],
 ): SanitizationResult => {
-  const suppressions = parseSuppressions(content);
-  const suppressedIds = new Set(suppressions.map((s) => s.ruleId));
+  const options: SanitizationOptions = Array.isArray(extraRulesOrOptions)
+    ? { extraRules: extraRulesOrOptions }
+    : extraRulesOrOptions;
+  const extraRules = options.extraRules ?? [];
+  const suppressionMode = options.suppressionMode ?? "report-only";
+
+  const suppressions = suppressionMode !== "disabled"
+    ? parseSuppressions(content)
+    : [];
+  const suppressedIds = suppressionMode === "honor"
+    ? new Set(suppressions.map((s) => s.ruleId))
+    : new Set<string>();
 
   const flags: SanitizationFlag[] = [];
   const seenPatterns = new Set<string>();

@@ -2,6 +2,65 @@
 
 All notable changes to `@gsknnft/skill-safe` are documented here.
 
+## 0.3.0 - 2026-04-27
+
+### Added
+
+- Added structured governance mapping registry:
+  - `GovernanceFramework`
+  - `MappingConfidence`
+  - `GovernanceMapping`
+  - `CATEGORY_MAPPINGS`
+  - `getMappingsForCategory()`
+  - `toReportArrays()`
+  - `getCategoryReportArrays()`
+- Added package subpath export:
+  - `@gsknnft/skill-safe/mappings`
+- Added versioned governance mapping metadata for:
+  - OWASP Agentic AI
+  - OWASP LLM Top 10
+  - MITRE ATLAS
+  - NIST AI RMF
+- Added mapping confidence metadata:
+  - `direct`
+  - `related`
+  - `inferred`
+- Added suppression comment support — `<!-- skill-safe-ignore SS001: reason -->`.
+- Added three-mode `SuppressionMode`: `"report-only"` (default), `"honor"`, `"disabled"`.
+  - **Security note:** default is `"report-only"` — untrusted skills cannot silence their own findings.
+- Added CLI flags `--honor-suppressions` and `--no-suppressions`.
+- Added public `parseSuppressions()` API.
+- Added `SanitizationSuppression` metadata (`ruleId`, `reason`, `line`) to `SanitizationResult`.
+- Added suppression aggregate count to `SkillSafeReportSummary`.
+- Added `suppressionMode` option to `ScanSkillFilesOptions` and `ScanSkillDirectoryOptions`.
+- Added `SanitizationOptions` object form for `sanitizeSkillMarkdown()` (backward-compatible with legacy `RuleDefinition[]` positional arg).
+- Added governance mapping validation script: `pnpm validate:mappings`.
+- Added tests for mapping coverage and suppression parsing.
+- Added zero-dependency `resolveMarkdownFile()` / `resolveGitHubMarkdownFile()` helpers for GitHub-compatible contents APIs.
+- Added v0.3+ roadmap, contribution guide, security policy, and package-local CI workflow.
+- Added package subpath export:
+  - `@gsknnft/skill-safe/resolve-markdown-file`
+
+### Changed
+
+- Moved category-level governance mappings out of `rules.ts` into a dedicated mapping registry.
+- Report mapping arrays are now generated from the structured registry while preserving backward-compatible report output.
+- Built-in rule mappings now resolve through the shared registry fallback path.
+- `resolveMarkdownFile()` now uses injected/global `fetch` instead of `axios`.
+
+### Fixed
+
+- Fixed `resolveMarkdownFile.ts` so it preserves the package's zero-runtime-dependency contract.
+
+### Tests
+
+- Current package test coverage: `96` passing tests.
+- Mapping validator confirms:
+  - every category has governance mappings
+  - content categories cover all four frameworks
+  - all built-in rules resolve to mappings
+  - supply-chain categories include MITRE `AML.T0010`
+
 ## 0.2.1 - 2026-04-27
 
 ### Added

@@ -14,7 +14,7 @@ import
         describeSkillSource,
         resolveAndScanSkillMarkdown,
     } from "./resolver.js";
-import { sanitizeSkillMarkdown } from "./sanitize.js";
+import { sanitizeSkillMarkdown, type SuppressionMode } from "./sanitize.js";
 import { stringifySkillSafeSarifJson } from "./sarif.js";
 import { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 import { requiresSanitization } from "./trust.js";
@@ -31,6 +31,7 @@ type Args = {
   full: boolean;
   out: string | null;
   failOn: "never" | "review" | "block";
+  suppressionMode: SuppressionMode;
   help: boolean;
 };
 
@@ -89,6 +90,8 @@ Options:
   --dir <path>        Recursively scan SKILL.md/skill.md files under a directory.
   --out <path>        Write the report to a file (JSON, SARIF, or Markdown).
   --fail-on <mode>    never | review | block. Default: block.
+  --honor-suppressions  Apply skill-safe-ignore comments. Use only for trusted sources.
+  --no-suppressions     Disable suppression parsing.
   --help              Show this help.
 
 Exit codes:
@@ -108,6 +111,7 @@ const parseArgs = (argv: string[]): Args => {
     full: false,
     out: null,
     failOn: "block",
+    suppressionMode: "report-only",
     help: false,
   };
 
@@ -137,6 +141,10 @@ const parseArgs = (argv: string[]): Args => {
         throw new Error("--fail-on must be one of: never, review, block");
       }
       args.failOn = mode;
+    } else if (value === "--honor-suppressions") {
+      args.suppressionMode = "honor";
+    } else if (value === "--no-suppressions") {
+      args.suppressionMode = "disabled";
     } else if (value.startsWith("--")) {
       throw new Error(`Unknown option: ${value}`);
     } else if (!args.source) {
@@ -165,22 +173,25 @@ const shouldFail = (report: SkillSafeFullReport, failOn: Args["failOn"]): boolea
   return severityRank[report.summary.recommendedAction] >= severityRank[failOn];
 };
 
-const scanFile = async (filePath: string): Promise<SkillSafeFullReport> => {
+const scanFile = async (filePath: string, args: Args): Promise<SkillSafeFullReport> => {
   const absolutePath = resolve(filePath);
   const { report } = await scanSkillFiles([absolutePath], {
     root: dirname(absolutePath),
     source: pathToFileURL(absolutePath).toString(),
+    suppressionMode: args.suppressionMode,
   });
   return report;
 };
 
-const scanDirectory = async (dirPath: string): Promise<SkillSafeFullReport> => {
-  const { report } = await scanSkillDirectory(resolve(dirPath));
+const scanDirectory = async (dirPath: string, args: Args): Promise<SkillSafeFullReport> => {
+  const { report } = await scanSkillDirectory(resolve(dirPath), {
+    suppressionMode: args.suppressionMode,
+  });
   return report;
 };
 
-const scanText = (text: string): SkillSafeFullReport => {
-  const scan = sanitizeSkillMarkdown(text);
+const scanText = (text: string, args: Args): SkillSafeFullReport => {
+  const scan = sanitizeSkillMarkdown(text, { suppressionMode: args.suppressionMode });
   return createSkillSafeReport({
     mode: "text",
     documents: [
@@ -199,10 +210,10 @@ const scanText = (text: string): SkillSafeFullReport => {
   });
 };
 
-const scanSource = async (source: string): Promise<SkillSafeFullReport> => {
+const scanSource = async (source: string, args: Args): Promise<SkillSafeFullReport> => {
   const descriptor = describeSkillSource(source);
   const resolved = await resolveAndScanSkillMarkdown(source);
-  const scan = resolved.scan ?? sanitizeSkillMarkdown(resolved.markdown);
+  const scan = resolved.scan ?? sanitizeSkillMarkdown(resolved.markdown, { suppressionMode: args.suppressionMode });
 
   return createSkillSafeReport({
     mode: "resolved-source",
@@ -244,25 +255,25 @@ async function main(): Promise<void> {
 
   let report: SkillSafeFullReport;
   if (args.file) {
-    report = await scanFile(args.file);
+    report = await scanFile(args.file, args);
   } else if (args.dir) {
-    report = await scanDirectory(args.dir);
+    report = await scanDirectory(args.dir, args);
   } else if (args.text !== null) {
-    report = scanText(args.text);
+    report = scanText(args.text, args);
   } else if (args.source) {
     const possiblePath = resolve(args.source);
     try {
       const pathStat = await stat(possiblePath);
       report = pathStat.isDirectory()
-        ? await scanDirectory(possiblePath)
+        ? await scanDirectory(possiblePath, args)
         : pathStat.isFile()
-          ? await scanFile(possiblePath)
-          : await scanSource(args.source);
+          ? await scanFile(possiblePath, args)
+          : await scanSource(args.source, args);
     } catch {
-      report = await scanSource(args.source);
+      report = await scanSource(args.source, args);
     }
   } else {
-    report = await scanSource(DEFAULT_SOURCE);
+    report = await scanSource(DEFAULT_SOURCE, args);
   }
 
   const output = renderReport(report, args);

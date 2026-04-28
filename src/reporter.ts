@@ -113,6 +113,10 @@ export const createSkillSafeReport = ({
       (sum, document) => sum + document.scan.report.summary.normalizedMatches,
       0,
     ),
+    suppressions: documents.reduce(
+      (sum, document) => sum + document.scan.suppressions.length,
+      0,
+    ),
   };
 
   return {
@@ -200,6 +204,7 @@ export const formatSkillSafeReportMarkdown = (
     `- Caution: ${report.summary.caution}`,
     `- Hidden content: ${report.summary.hiddenContent}`,
     `- Normalized matches: ${report.summary.normalizedMatches}`,
+    `- Suppressions: ${report.summary.suppressions}`,
     "",
     "## Categories",
     "",

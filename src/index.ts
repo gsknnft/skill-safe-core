@@ -29,6 +29,11 @@ export {
 } from "./resolver.js";
 
 export {
+  resolveMarkdownFile,
+  resolveGitHubMarkdownFile,
+} from "./resolveMarkdownFile.js";
+
+export {
   createSkillSafeDocumentReport,
   createSkillSafeReport,
   formatSkillSafeReportMarkdown,
@@ -85,7 +90,14 @@ export type {
   ScannedSkillFile,
 } from "./types.js";
 
+export type {
+  MarkdownFileSource,
+  ResolvedMarkdownFile,
+  ResolveMarkdownFileOptions,
+} from "./resolveMarkdownFile.js";
+
 export type { GovernanceFramework, MappingConfidence, GovernanceMapping } from "./mappings.js";
 
 export type { SanitizationSuppression } from "./types.js";
 export { parseSuppressions } from "./sanitize.js";
+export type { SuppressionMode, SanitizationOptions } from "./sanitize.js";

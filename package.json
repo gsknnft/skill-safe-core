@@ -48,6 +48,11 @@
       "import": "./dist/resolver.js",
       "default": "./dist/resolver.js"
     },
+    "./resolve-markdown-file": {
+      "types": "./dist/resolveMarkdownFile.d.ts",
+      "import": "./dist/resolveMarkdownFile.js",
+      "default": "./dist/resolveMarkdownFile.js"
+    },
     "./scanner": {
       "types": "./dist/scanner.d.ts",
       "import": "./dist/scanner.js",
@@ -80,6 +85,8 @@
     "examples/reports/.gitkeep",
     "package.json",
     "README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
     "CHANGELOG.md",
     "LICENSE"
   ],

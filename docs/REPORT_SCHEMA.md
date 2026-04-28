@@ -185,6 +185,31 @@ type SkillSafeFullReport = {
 
 `ok` is true only when every document in the full report is safe to install.
 
+The full report summary includes the aggregate decision and evidence counts:
+
+```ts
+type SkillSafeReportSummary = {
+  safeToInstall: boolean;
+  recommendedAction: "allow" | "review" | "block";
+  severity: "safe" | "caution" | "danger";
+  riskScore: number;
+  documents: number;
+  passed: number;
+  review: number;
+  blocked: number;
+  findings: number;
+  danger: number;
+  caution: number;
+  hiddenContent: number;
+  normalizedMatches: number;
+  suppressions: number;
+};
+```
+
+`suppressions` counts parsed `skill-safe-ignore` comments across all scanned
+documents. Suppressions are report-only by default; hosts must opt into honoring
+them for trusted workspace or verified sources.
+
 ## Integration Requirements
 
 Consumers should:

@@ -21,7 +21,7 @@ import {
 } from "./reporter.js";
 import { requiresSanitization, resolveSkillTrustLevel } from "./trust.js";
 import type { RuleDefinition, ScannedSkillFile, ScanSkillBatchResult, ScanSkillDirectoryOptions, ScanSkillFilesOptions } from "./types.js";
-import { sanitizeSkillMarkdown } from "./sanitize.js";
+import { sanitizeSkillMarkdown, type SuppressionMode } from "./sanitize.js";
 
 
 const DEFAULT_IGNORE_DIRS = new Set([
@@ -86,14 +86,15 @@ async function scanSingleFile(
   bundled: boolean,
   extraRules: RuleDefinition[],
   withIntegrity: boolean,
+  suppressionMode: SuppressionMode = "report-only",
 ): Promise<ScannedSkillFile> {
   const relativePath = relative(root, absolutePath).replace(/\\/g, "/");
   const content = await readFile(absolutePath, "utf8");
   const trust = resolveSkillTrustLevel(source, bundled);
   const shouldSanitize = !bundled && requiresSanitization(trust);
   const scan = shouldSanitize
-    ? sanitizeSkillMarkdown(content, extraRules)
-    : sanitizeSkillMarkdown("", extraRules);
+    ? sanitizeSkillMarkdown(content, { extraRules, suppressionMode })
+    : sanitizeSkillMarkdown("", { extraRules, suppressionMode });
 
   const document = createSkillSafeDocumentReport({
     id: relativePath || basename(absolutePath),
@@ -126,6 +127,7 @@ export const scanSkillFiles = async (
   const bundled = options.bundled ?? false;
   const extraRules = options.extraRules ?? [];
   const withIntegrity = options.computeIntegrity ?? true;
+  const suppressionMode = options.suppressionMode ?? "report-only";
 
   if (files.length === 0) {
     throw new Error("scanSkillFiles: no files provided.");
@@ -144,6 +146,7 @@ export const scanSkillFiles = async (
         bundled,
         extraRules,
         withIntegrity,
+        suppressionMode,
       );
     }),
   );

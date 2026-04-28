@@ -137,6 +137,7 @@ result.report.mappings.nistAiRmf;
 
 result.flags[0]?.ruleId; // stable SS### rule ID when available
 result.flags[0]?.location; // line/column/offset evidence when available
+result.suppressions; // parsed skill-safe-ignore comments
 ```
 
 The report is designed for UI badges, marketplace review, CI output, and later
@@ -318,3 +319,14 @@ The companion packages use compatible report envelopes:
 
 This keeps the core scanner fast and deterministic while still allowing richer
 LLM and runtime reports in hosts such as Claw3D, WorkLab, Campus, or CI.
+
+## Project Docs
+
+- [Report schema](docs/REPORT_SCHEMA.md)
+- [Rules reference](docs/RULES_REFERENCE.md)
+- [SARIF output](docs/SARIF_OUTPUT.md)
+- [Risk scoring](docs/RISK_SCORING.md)
+- [Integration guide](docs/INTEGRATION_GUIDE.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)

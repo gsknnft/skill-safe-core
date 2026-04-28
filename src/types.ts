@@ -246,6 +246,8 @@ export type SkillSafeReportSummary = {
   caution: number;
   hiddenContent: number;
   normalizedMatches: number;
+  /** Suppression comments parsed across all documents. */
+  suppressions: number;
 };
 
 export type SkillSafeFullReport = {
@@ -297,6 +299,11 @@ export type ScanSkillFilesOptions = {
    * Return null to use the default source.
    */
   resolveSource?: (filePath: string) => string | null;
+  /**
+   * Controls how `<!-- skill-safe-ignore SS001: reason -->` comments are
+   * treated during scanning. Defaults to `"report-only"`.
+   */
+  suppressionMode?: import("./sanitize.js").SuppressionMode;
 };
 
 export type ScanSkillDirectoryOptions = ScanSkillFilesOptions & {
