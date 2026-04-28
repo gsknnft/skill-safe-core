@@ -6,6 +6,9 @@ export {
   sanitizeSkillMarkdown,
   sanitizeSkillFile,
   extractSkillFrontmatter,
+  parseSkillFrontmatter,
+  getRiskLevel,
+  getRiskLevelLabel,
 } from "./sanitize.js";
 
 export {
@@ -58,9 +61,14 @@ export {
 
 export { auditSuppressions } from "./suppressionAudit.js";
 
+export { loadConfig, resolveConfig } from "./config.js";
+export type { ResolvedSkillSafeConfig } from "./config.js";
+
 export { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 
 export type {
+  SkillSafeConfig,
+  SkillSafeConfigRule,
   ToSarifOptions,
   SanitizationCategory,
   SanitizationSeverity,
@@ -107,6 +115,8 @@ export type {
   MarkdownFileSource,
   ResolvedMarkdownFile,
   ResolveMarkdownFileOptions,
+  SkillFrontmatter,
+  SkillRiskLevel,
 } from "./types.js";
 
 export { parseSuppressions } from "./sanitize.js";

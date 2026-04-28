@@ -7,6 +7,75 @@ export type SkillTrustLevel =
 
 export type SkillSafePolicyPreset = "strict" | "marketplace" | "workspace";
 
+// ---------------------------------------------------------------------------
+// Risk Level — maps a 0-100 risk score to a named severity tier for UI display.
+// Aligned with the RISK_SCORING.md legend.
+// ---------------------------------------------------------------------------
+
+export type SkillRiskLevel =
+  | "safe"      // 0
+  | "low"       // 1–20
+  | "moderate"  // 21–40
+  | "elevated"  // 41–60
+  | "high"      // 61–80
+  | "critical"; // 81–100
+
+// ---------------------------------------------------------------------------
+// Skill Frontmatter — typed representation of SKILL.md YAML header.
+//
+// Field names are chosen to be compatible with:
+//   - OpenAI Agent SDK tool definitions (name, description, inputSchema)
+//   - MCP tool definitions (name, description, inputSchema)
+//   - Claude Code skill commands (name, description, tools)
+//   - Common SKILL.md conventions (source, permissions, version, author)
+// ---------------------------------------------------------------------------
+
+export type SkillFrontmatter = {
+  /** Display name for the skill. Required. */
+  name: string;
+  /** One-sentence description of what the skill does. Required. */
+  description: string;
+  /** Semantic version string. */
+  version?: string;
+  /** Author name or org handle. */
+  author?: string;
+  /** SPDX license identifier. */
+  license?: string;
+  /**
+   * Canonical source URI for this skill.
+   * Formats: `github:owner/repo`, `npm:package@version`, `url:https://...`
+   */
+  source?: string;
+  /**
+   * Tool names or tool specifiers the skill is allowed to use.
+   * Compatible with OpenAI tool_choice and MCP tool list.
+   */
+  tools?: string[];
+  /**
+   * Permission scopes the skill declares it needs.
+   * E.g. `read:files`, `write:github`, `execute:shell`
+   */
+  permissions?: string[];
+  /**
+   * Preferred or required model for this skill.
+   * E.g. `claude-opus-4-7`, `gpt-4o`
+   */
+  model?: string;
+  /** Taxonomy category for marketplace grouping. */
+  category?: string;
+  /** Freeform tags for search and filtering. */
+  tags?: string[];
+  /**
+   * JSON Schema string describing expected input.
+   * Compatible with OpenAI function calling and MCP inputSchema.
+   */
+  inputSchema?: string;
+  /** JSON Schema string describing expected output. */
+  outputSchema?: string;
+  /** Pass-through for custom or future standard fields. */
+  [key: string]: string | string[] | undefined;
+};
+
 export type SanitizationLocation = {
   /** 1-based line number in the scanned content. */
   line: number;
@@ -497,6 +566,64 @@ export type MarkdownFileSource =
   | "huggingface"
   | "url"
   | "unknown";
+
+// ---------------------------------------------------------------------------
+// Project-level config — skill-safe.config.json
+// ---------------------------------------------------------------------------
+
+/**
+ * Serializable rule definition for skill-safe.config.json.
+ * The pattern is a string (compiled to RegExp on load).
+ */
+export type SkillSafeConfigRule = {
+  /** RegExp source string. Flags default to "i" unless overridden. */
+  pattern: string;
+  /** RegExp flags. Defaults to "i". */
+  flags?: string;
+  severity: SanitizationSeverity;
+  category: SanitizationCategory;
+  description: string;
+  /** Optional stable rule ID (SS-prefixed). */
+  id?: SkillRuleId;
+  /** Optional short rule name for reports. */
+  name?: string;
+};
+
+/**
+ * skill-safe.config.json schema.
+ *
+ * All fields are optional — omitted fields fall back to the chosen preset
+ * (or "workspace" if preset is also omitted).
+ *
+ * CLI flags always override config file values.
+ */
+export type SkillSafeConfig = {
+  /**
+   * Base policy preset. Individual fields (failOn, suppressionMode, npmPolicy)
+   * override the preset after it is applied.
+   */
+  preset?: SkillSafePolicyPreset;
+  /** Override the fail threshold from the preset. */
+  failOn?: "never" | "review" | "block";
+  /** Override suppression handling from the preset. */
+  suppressionMode?: SuppressionMode;
+  /** Override npm source policy from the preset. */
+  npmPolicy?: NpmSourcePolicy;
+  /**
+   * Additional rules appended to the built-in set.
+   * Patterns are strings and compiled to RegExp on load.
+   */
+  extraRules?: SkillSafeConfigRule[];
+  /** Scan target configuration for directory scans. */
+  scan?: {
+    /** Glob patterns or directory paths to include. Defaults to current directory. */
+    include?: string[];
+    /** Directory basenames to exclude. */
+    exclude?: string[];
+    /** Max recursion depth. Defaults to 10. */
+    maxDepth?: number;
+  };
+};
 
 export type ResolveMarkdownFileOptions = {
   owner?: string;

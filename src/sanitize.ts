@@ -9,6 +9,8 @@ import type {
   SanitizationOptions,
   SanitizationResult,
   SanitizationSuppression,
+  SkillFrontmatter,
+  SkillRiskLevel,
   SkillScanReport,
   SuppressionMode,
 } from "./types.js";
@@ -407,6 +409,77 @@ export const extractSkillFrontmatter = (
     if (key) result[key] = value;
   }
   return result;
+};
+
+/**
+ * Parse a raw frontmatter record into a typed SkillFrontmatter.
+ * Array fields (tools, permissions, tags) are parsed from comma-separated
+ * strings or bracket notation. Compatible with OpenAI/MCP tool schemas.
+ */
+export const parseSkillFrontmatter = (
+  raw: Record<string, string>,
+): SkillFrontmatter => {
+  const parseArray = (value: string | undefined): string[] | undefined => {
+    if (!value) return undefined;
+    const trimmed = value.trim();
+    // [a, b, c] bracket notation
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      return trimmed
+        .slice(1, -1)
+        .split(",")
+        .map((s) => s.trim().replace(/^['"]|['"]$/g, ""))
+        .filter(Boolean);
+    }
+    // comma-separated
+    if (trimmed.includes(",")) {
+      return trimmed
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return [trimmed];
+  };
+
+  const { name, description, version, author, license, source, model,
+    category, tools, permissions, tags, inputSchema, outputSchema, ...rest } = raw;
+
+  return {
+    name: name ?? "",
+    description: description ?? "",
+    ...(version ? { version } : {}),
+    ...(author ? { author } : {}),
+    ...(license ? { license } : {}),
+    ...(source ? { source } : {}),
+    ...(model ? { model } : {}),
+    ...(category ? { category } : {}),
+    ...(inputSchema ? { inputSchema } : {}),
+    ...(outputSchema ? { outputSchema } : {}),
+    ...(parseArray(tools) ? { tools: parseArray(tools) } : {}),
+    ...(parseArray(permissions) ? { permissions: parseArray(permissions) } : {}),
+    ...(parseArray(tags) ? { tags: parseArray(tags) } : {}),
+    ...rest,
+  };
+};
+
+/**
+ * Map a 0–100 risk score to a named risk level for UI display and gating.
+ * Mirrors the legend in docs/RISK_SCORING.md.
+ */
+export const getRiskLevel = (score: number): SkillRiskLevel => {
+  if (score === 0) return "safe";
+  if (score <= 20) return "low";
+  if (score <= 40) return "moderate";
+  if (score <= 60) return "elevated";
+  if (score <= 80) return "high";
+  return "critical";
+};
+
+/**
+ * Human-readable label for a risk level.
+ */
+export const getRiskLevelLabel = (score: number): string => {
+  const level = getRiskLevel(score);
+  return level.charAt(0).toUpperCase() + level.slice(1);
 };
 
 /**

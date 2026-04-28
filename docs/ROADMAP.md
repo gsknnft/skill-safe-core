@@ -19,11 +19,21 @@ auditable, and embeddable in CLIs, marketplaces, local apps, and CI.
 - Security CI lane: dependency audit, self-scan with SARIF upload, supply-chain assertions
 - 119 tests, all passing
 
+**Documentation and release infrastructure:**
+- `docs/SKILL_SUITE.md` — canonical boundary definitions for all five packages
+- `docs/SUPPLY_CHAIN.md` — full threat model, provenance verification, lockfile security
+- `docs/RISK_SCORING.md` — accurate scoring algorithm, risk legend, composite escalation
+- `.github/workflows/publish.yml` — OIDC provenance publish workflow (no long-lived tokens)
+- `examples/suite/` — canonical fixture set: clean, malicious, suppressed + canonical JSON reports
+- `pnpm demo` — one-command scan → audit demo
+- Policy preset table in README, package badges, "known limitations" blocks across all three packages
+
 **What's clean:**
 - Zero runtime dependencies — asserted in CI
 - Typecheck clean, `pnpm pack --dry-run` clean
 - `--audit-suppressions` now emits scan report + audit together (not audit-only)
 - SARIF upload in security CI self-scans example skills on every push
+- Supply chain CI: lockfile registry source check, frozen lockfile install
 
 ## v0.4 Candidates
 
@@ -44,12 +54,46 @@ auditable, and embeddable in CLIs, marketplaces, local apps, and CI.
   - npm maintainer account age (new maintainer = supply-chain risk)
   - repository archived/disabled status via GitHub API
   - license mismatch between package.json and SPDX registry
+- **Release provenance docs and templates**:
+  - npm trusted publishing / provenance checklist
+  - signed tag guidance
+  - release tarball verification
+  - CI example for strict marketplace ingestion
+- **Host-integration recipes**:
+  - wallet / NFT host flow: scan first, multisig or Safe policy later
+  - marketplace ingestion flow: ledger discover, safe scan, UI review
+  - local workspace flow: scan, suppressions audit, runtime allowlist
 
 **Rule additions (next batch):**
 - Git credential helper reads (`git credential`, `~/.git-credentials`)
 - Cloud metadata endpoint access (`169.254.169.254`)
 - Container escape patterns (`--privileged`, `hostPID`, `/proc/1/root`)
 - Token leakage via URLs (auth tokens in query strings)
+
+**Supply chain hardening (next batch):**
+- Lockfile-lint in CI — assert no unexpected registry sources programmatically
+- Release artifact checksums — SHA-256 digest published alongside each GitHub release
+- Fixture coverage report — CI assert every rule has a `bad.md` before each minor
+- npm `--provenance` verification guide in contributor docs
+
+## Out Of Scope For Core
+
+These belong in companion packages or host runtimes, not the zero-dep core scanner:
+
+- **Call-graph static analysis** (`skill-safe-judge` or a dedicated static layer)
+  — tracing whether entry points can reach dangerous functions like `fs.rm` or `fetch`
+- **Runtime containment** (`skill-safe-runtime`)
+  — container isolation, blast-radius constraints, tool allowlists at execution time
+- **LLM-based semantic scanning** (`skill-safe-judge`)
+  — reading natural-language instructions to catch intent-based evasion
+- blockchain transaction approval
+- Safe{Core} SDK wrappers
+- wallet key custody
+- LLM semantic classification
+- agent tool-call authorization
+
+The core scanner should keep producing deterministic evidence. Hosts decide
+what to do with that evidence.
 
 ## v1.0 Readiness Bar
 

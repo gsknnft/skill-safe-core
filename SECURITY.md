@@ -44,6 +44,13 @@ The core package:
 - **Suppression defaults to `"report-only"`** — skills cannot silence their own
   findings without the host explicitly opting into `"honor"` mode.
 
+## Boundary Notes
+
+`skill-safe` is not blockchain-specific and does not integrate with wallet
+software or Safe{Core} directly. Wallet-aware hosts can use it before enabling a
+skill, but key custody, transaction approval, multisig policy, and runtime
+read-only enforcement remain host responsibilities.
+
 ## What skill-safe Does NOT Do
 
 - It does not sandbox or execute agent tool calls at runtime.
@@ -53,6 +60,21 @@ The core package:
 
 Runtime enforcement belongs in host applications or companion packages such as
 `@gsknnft/skill-safe-runtime`.
+
+## Release Security
+
+Maintainers should publish from a clean release flow and verify:
+
+- npm maintainer accounts use 2FA or passkeys
+- npm trusted publishing or provenance is used where available
+- long-lived npm automation tokens are avoided
+- release tags are signed where practical
+- `pnpm test`, `pnpm build`, `pnpm validate:mappings`, example smoke, and
+  `pnpm pack --dry-run` pass before publish
+- packed tarball contents do not include tests, caches, build info, or local
+  reports
+
+See [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md).
 
 ## CI Security Lane
 

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/@gsknnft/skill-safe/schema/config.json",
+  "preset": "workspace",
+  "failOn": "block",
+  "suppressionMode": "report-only",
+  "npmPolicy": {
+    "minAgeDays": 2,
+    "requireProvenance": false
+  },
+  "extraRules": [],
+  "scan": {
+    "include": [],
+    "exclude": ["node_modules", ".git", "dist"],
+    "maxDepth": 10
+  }
+}

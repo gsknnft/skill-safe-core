@@ -2,6 +2,7 @@
 import { stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { loadConfig, resolveConfig } from "./config.js";
 import {
   getPolicyPreset,
   isPolicyPreset,
@@ -45,6 +46,7 @@ type Args = {
   suppressionMode: SuppressionMode;
   preset: SkillSafePolicyPreset;
   npmPolicy: NpmSourcePolicy;
+  extraRules: import("./types.js").RuleDefinition[];
   auditSuppressions: boolean;
   help: boolean;
 };
@@ -115,8 +117,7 @@ Exit codes:
   1  scan completed and met --fail-on threshold, or failed to scan
 `;
 
-const parseArgs = (argv: string[]): Args => {
-  const policy = getPolicyPreset("workspace");
+const parseArgs = (argv: string[], defaults: ReturnType<typeof resolveConfig>): Args => {
   const args: Args = {
     source: null,
     file: null,
@@ -127,10 +128,11 @@ const parseArgs = (argv: string[]): Args => {
     markdown: false,
     full: false,
     out: null,
-    failOn: policy.failOn,
-    suppressionMode: policy.suppressionMode,
-    preset: policy.preset,
-    npmPolicy: policy.npmPolicy,
+    failOn: defaults.failOn,
+    suppressionMode: defaults.suppressionMode,
+    preset: defaults.preset,
+    npmPolicy: defaults.npmPolicy,
+    extraRules: defaults.extraRules,
     auditSuppressions: false,
     help: false,
   };
@@ -246,6 +248,7 @@ const scanFile = async (
     root: dirname(absolutePath),
     source: pathToFileURL(absolutePath).toString(),
     suppressionMode: args.suppressionMode,
+    extraRules: args.extraRules.length ? args.extraRules : undefined,
   });
   return report;
 };
@@ -256,6 +259,7 @@ const scanDirectory = async (
 ): Promise<SkillSafeFullReport> => {
   const { report } = await scanSkillDirectory(resolve(dirPath), {
     suppressionMode: args.suppressionMode,
+    extraRules: args.extraRules.length ? args.extraRules : undefined,
   });
   return report;
 };
@@ -263,6 +267,7 @@ const scanDirectory = async (
 const scanText = (text: string, args: Args): SkillSafeFullReport => {
   const scan = sanitizeSkillMarkdown(text, {
     suppressionMode: args.suppressionMode,
+    extraRules: args.extraRules.length ? args.extraRules : undefined,
   });
   return createSkillSafeReport({
     mode: "text",
@@ -294,6 +299,7 @@ const scanSource = async (
     ? appendSanitizationFlags(
         sanitizeSkillMarkdown(resolved.markdown, {
           suppressionMode: args.suppressionMode,
+          extraRules: args.extraRules.length ? args.extraRules : undefined,
         }),
         resolved.sourceFlags,
       )
@@ -329,7 +335,9 @@ const renderReport = (report: SkillSafeFullReport, args: Args): string => {
 };
 
 async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
+  const config = await loadConfig();
+  const defaults = resolveConfig(config);
+  const args = parseArgs(process.argv.slice(2), defaults);
   if (args.help) {
     console.log(HELP);
     return;

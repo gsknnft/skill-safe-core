@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
 [![Zero dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](package.json)
-[![CI](https://github.com/gsknnft/sigilnet/actions/workflows/ci.yml/badge.svg)](https://github.com/gsknnft/sigilnet/actions/workflows/ci.yml)
+[![CI](https://github.com/gsknnft/skill-safe/workflows/ci.yml/badge.svg)](https://github.com/gsknnft/skill-safe/workflows/ci.yml)
 
 A lightweight static scanner for agent skill markdown before install.
 
@@ -21,6 +21,11 @@ before a skill is installed or enabled.
 It is not a sandbox. A safe scan result means no known static red flags were
 found; runtime permissions, tool allowlists, filesystem isolation, network
 policy, and human review still matter.
+
+It is also not blockchain-specific. Wallet, NFT, and Safe{Core} workflows can
+use `skill-safe` as a pre-install gate, but transaction authorization,
+multi-signature policy, key custody, and runtime read-only enforcement belong in
+the host application.
 
 ## Why skill-safe
 
@@ -47,6 +52,35 @@ Core differences:
 Use `skill-safe` as the first gate. Pair it with runtime sandboxing, tool
 allowlists, human approval, and optional semantic review for a complete defense
 layer.
+
+## Accurate Boundaries
+
+`skill-safe` answers one question:
+
+> Does this skill markdown contain known static indicators that should block or
+> require review before install?
+
+It does not:
+
+- enforce read-only execution
+- run blockchain transactions
+- wrap Safe{Core} SDK calls
+- hold wallet keys
+- execute agent tools
+- call an LLM for semantic review
+
+For wallet or NFT agents, the expected flow is:
+
+1. Use `skill-ledger` to discover or inventory candidate skills.
+2. Use `skill-safe` to scan the skill before it is enabled.
+3. Use `skill-safe-judge` only when optional semantic review is needed.
+4. Use the host runtime, wallet policy, Safe{Core}, or multisig flow to approve
+   actual asset-moving actions.
+5. Use `skill-safe-runtime` or host policy to constrain tool calls at execution
+   time.
+
+That separation keeps the scanner dependency-light and makes it useful outside
+any single wallet, chain, agent runtime, or marketplace.
 
 ## Quick Demo
 
@@ -75,7 +109,7 @@ import {
   sanitizeSkillMarkdown,
 } from "@gsknnft/skill-safe";
 
-const trust = resolveSkillTrustLevel("github:HashLips/agent-skills", false);
+const trust = resolveSkillTrustLevel("github:gsknnft/agent-skills", false);
 
 if (requiresSanitization(trust)) {
   const result = sanitizeSkillMarkdown(markdown);
@@ -91,7 +125,7 @@ if (requiresSanitization(trust)) {
 The package ships a CLI for real pre-install checks and CI reports.
 
 ```sh
-skill-safe github:HashLips/agent-skills --full
+skill-safe github:gsknnft/agent-skills --full
 skill-safe ./skills --json
 skill-safe --file ./SKILL.md --json
 skill-safe --dir ./skills --out skill-safe-report.json
@@ -246,6 +280,23 @@ The full report envelope includes:
 - governance mappings
 - JSON and Markdown rendering
 
+## Risk Score Bands
+
+`riskScore` is a display and governance signal. The canonical install decision
+is still `recommendedAction`, because a single critical indicator should block
+even if a score band would otherwise look moderate.
+
+| Score | UI label | Typical action |
+| --- | --- | --- |
+| `0-20` | Low | Allow if source trust is acceptable |
+| `21-40` | Elevated | Allow only in trusted workspaces or after quick review |
+| `41-60` | Medium | Manual review recommended |
+| `61-80` | High | Quarantine or block unless explicitly approved |
+| `81-100` | Critical | Block by default |
+
+Host applications can use these bands for badges and dashboards, but CI should
+prefer `--fail-on`, policy presets, or `report.recommendedAction`.
+
 ## Governance Mappings
 
 Every finding category is mapped into governance fields that downstream tools can
@@ -333,7 +384,7 @@ const result = sanitizeSkillMarkdown(markdown, extraRules);
 ```sh
 pnpm test
 pnpm build
-node dist/cli.js github:HashLips/agent-skills --full
+node dist/cli.js github:gsknnft/agent-skills --full
 ```
 
 ## Examples And Smoke Test
@@ -419,6 +470,22 @@ A `safeToInstall: true` result means no known static red flags were found at
 scan time. Runtime permissions, tool allowlists, filesystem isolation, network
 policy, and human review still matter.
 
+## Release Security
+
+For public releases, the recommended hardening baseline is:
+
+- publish from a clean CI release job, not a local dirty worktree
+- use npm trusted publishing or provenance when available
+- require npm 2FA or passkeys for maintainer accounts
+- avoid long-lived npm automation tokens
+- sign release tags when practical
+- run `pnpm test`, `pnpm build`, `pnpm validate:mappings`, example reports, and
+  `pnpm pack --dry-run` before publishing
+- review the packed tarball contents before release
+
+See [docs/SUPPLY_CHAIN.md](docs/SUPPLY_CHAIN.md) for the full release-security
+checklist.
+
 ## Project Docs
 
 - [Report schema](docs/REPORT_SCHEMA.md)
@@ -426,6 +493,7 @@ policy, and human review still matter.
 - [SARIF output](docs/SARIF_OUTPUT.md)
 - [Risk scoring](docs/RISK_SCORING.md)
 - [Integration guide](docs/INTEGRATION_GUIDE.md)
+- [Supply-chain hardening](docs/SUPPLY_CHAIN.md)
 - [Skill suite boundaries](docs/SKILL_SUITE.md)
 - [Demo flow](examples/DEMO_FLOW.md)
 - [Roadmap](docs/ROADMAP.md)
