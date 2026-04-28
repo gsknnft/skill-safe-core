@@ -414,4 +414,171 @@ export const RULES: RuleDefinition[] = [
     owasp: ["Agentic Instruction and Tool Manipulation"],
   },
 
+  // -- Credential and secrets access -----------------------------------------------
+  // Skills that read private keys, tokens, or credential stores are extremely
+  // high risk; they can silently harvest authentication material.
+
+  {
+    id: "SS100",
+    name: "ssh-key-read",
+    pattern: /(?:read|cat|open|load|get)\s+(?:.*?\/)?\.ssh\/(?:id_rsa|id_ed25519|id_ecdsa|id_dsa|authorized_keys)/i,
+    severity: "danger",
+    category: "data-exfiltration",
+    description: "Reads an SSH private key or authorized_keys file.",
+    owasp: ["Sensitive Information Disclosure"],
+    mitreAtlas: ["AML.T0040"],
+    nistAiRmf: ["Map"],
+  },
+  {
+    id: "SS101",
+    name: "env-file-read",
+    // Match: require('.env'), open('.env.production'), cat .env, fs.readFile('.env.local')
+    pattern: /(?:read|cat|open|load|require|import|fs\.readFile)\s*[\s(]?\s*['"`]?(?:\.\/|\/)?\.env(?:\.(?:local|production|staging|test|development))?['"`]?/i,
+    severity: "danger",
+    category: "data-exfiltration",
+    description: "Reads a .env or environment secrets file.",
+    owasp: ["Sensitive Information Disclosure"],
+    mitreAtlas: ["AML.T0040"],
+    nistAiRmf: ["Map"],
+  },
+  {
+    id: "SS102",
+    name: "aws-credentials-read",
+    pattern: /(?:read|cat|open|load)\s+(?:.*?\/)?\.aws\/credentials/i,
+    severity: "danger",
+    category: "data-exfiltration",
+    description: "Reads AWS credential files.",
+    owasp: ["Sensitive Information Disclosure"],
+    mitreAtlas: ["AML.T0040"],
+    nistAiRmf: ["Map"],
+  },
+  {
+    id: "SS103",
+    name: "token-env-access",
+    // Matches: process.env.GITHUB_TOKEN, process.env['OPENAI_API_KEY'], os.environ['SECRET']
+    pattern: /(?:process\.env|os\.environ|getenv|System\.getenv)\s*[\[.(][\s'"` ]*[A-Z_]{4,}_(?:TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API_KEY)/i,
+    severity: "caution",
+    category: "data-exfiltration",
+    description: "Accesses an environment variable that likely holds a secret or API key.",
+    owasp: ["Sensitive Information Disclosure"],
+    nistAiRmf: ["Map"],
+  },
+
+  // -- Remote code execution -------------------------------------------------------
+  // Patterns that pipe remote content directly into a shell interpreter bypass
+  // supply-chain controls entirely.
+
+  {
+    id: "SS110",
+    name: "curl-pipe-shell",
+    pattern: /curl\s+[^\n|&;]{0,200}\|\s*(?:bash|sh|zsh|fish|dash|ash|ksh)/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "Pipes a remote URL directly into a shell — classic supply-chain attack vector.",
+    owasp: ["A08:2021 – Software and Data Integrity Failures"],
+    mitreAtlas: ["AML.T0010"],
+    nistAiRmf: ["Map"],
+  },
+  {
+    id: "SS111",
+    name: "wget-pipe-shell",
+    pattern: /wget\s+[^\n|&;]{0,200}\|\s*(?:bash|sh|zsh|fish|dash|ash|ksh)/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "Pipes a remote URL directly into a shell.",
+    owasp: ["A08:2021 – Software and Data Integrity Failures"],
+    mitreAtlas: ["AML.T0010"],
+    nistAiRmf: ["Map"],
+  },
+  {
+    id: "SS112",
+    name: "powershell-iex-download",
+    // IEX / Invoke-Expression with a download — common PowerShell dropper pattern.
+    pattern: /(?:iex|Invoke-Expression)\s*(?:\(|\s).*?(?:DownloadString|WebClient|Invoke-WebRequest|curl|wget)/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "PowerShell Invoke-Expression with a remote download — dropper pattern.",
+    owasp: ["A08:2021 – Software and Data Integrity Failures"],
+    mitreAtlas: ["AML.T0010"],
+    nistAiRmf: ["Map"],
+  },
+  {
+    id: "SS113",
+    name: "remote-prompt-load",
+    // Agents that load additional instructions from a remote URL at runtime are
+    // susceptible to indirect prompt injection via the remote resource.
+    pattern: /(?:fetch|axios|http\.get|got|request)\s*\(\s*['"`]https?:\/\/[^'"` )]{10,}['"`]\s*\)[^\n]{0,200}(?:system\s+prompt|instruction|directive|eval|exec)/i,
+    severity: "danger",
+    category: "prompt-injection",
+    description: "Loads remote content and passes it as instructions — indirect prompt injection risk.",
+    owasp: ["Prompt Injection"],
+    mitreAtlas: ["AML.T0051"],
+    nistAiRmf: ["Map"],
+  },
+
+  // -- Destructive filesystem operations -------------------------------------------
+
+  {
+    id: "SS120",
+    name: "recursive-delete",
+    pattern: /rm\s+(?:-[rfRF]{1,4}\s+|--recursive\s+|--force\s+){1,3}[/~.]/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "Recursive force-delete from root, home, or current directory.",
+    owasp: ["Agentic Excessive Agency"],
+    mitreAtlas: ["AML.T0044"],
+    nistAiRmf: ["Map"],
+  },
+  {
+    id: "SS121",
+    name: "format-disk",
+    pattern: /(?:mkfs|format\s+[a-z]:?|diskpart|dd\s+if=\/dev\/zero)/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "Disk format or zero-fill command — highly destructive.",
+    owasp: ["Agentic Excessive Agency"],
+    mitreAtlas: ["AML.T0044"],
+    nistAiRmf: ["Map"],
+  },
+
+  // -- Shell profile and persistence -----------------------------------------------
+  // Skills that write to shell profiles can persist malicious instructions across
+  // sessions long after the skill is removed.
+
+  {
+    id: "SS130",
+    name: "shell-profile-write",
+    pattern: /(?:echo|printf|tee|>>)\s+.*(?:\.bash_profile|\.bashrc|\.zshrc|\.profile|\.zprofile|\.bash_login|\/etc\/profile|\/etc\/environment)/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "Writes to a shell profile or startup script — persistence mechanism.",
+    owasp: ["Agentic Excessive Agency"],
+    mitreAtlas: ["AML.T0044"],
+    nistAiRmf: ["Govern"],
+  },
+  {
+    id: "SS131",
+    name: "cron-write",
+    pattern: /(?:crontab\s+-[el]|echo\s+.*\|\s*crontab|\/etc\/cron)/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "Modifies cron jobs — can establish scheduled persistence.",
+    owasp: ["Agentic Excessive Agency"],
+    mitreAtlas: ["AML.T0044"],
+    nistAiRmf: ["Govern"],
+  },
+
+  // -- Clipboard exfiltration ------------------------------------------------------
+
+  {
+    id: "SS140",
+    name: "clipboard-exfiltration",
+    pattern: /(?:pbcopy|xclip\s+-selection\s+clipboard|xdotool\s+type|Set-Clipboard|Get-Clipboard)\s*[|<]/i,
+    severity: "caution",
+    category: "data-exfiltration",
+    description: "Exfiltrates content via the system clipboard.",
+    owasp: ["Sensitive Information Disclosure"],
+    nistAiRmf: ["Map"],
+  },
+
 ];

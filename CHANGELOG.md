@@ -35,7 +35,21 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
 - Added `suppressionMode` option to `ScanSkillFilesOptions` and `ScanSkillDirectoryOptions`.
 - Added `SanitizationOptions` object form for `sanitizeSkillMarkdown()` (backward-compatible with legacy `RuleDefinition[]` positional arg).
 - Added governance mapping validation script: `pnpm validate:mappings`.
-- Added tests for mapping coverage and suppression parsing.
+- Added tests for mapping coverage, suppression parsing, and all new rules (112 tests total).
+- Added 14 new static detection rules (SS100–SS140):
+  - **SS100** — SSH private key read
+  - **SS101** — `.env` secrets file read
+  - **SS102** — AWS credentials file read
+  - **SS103** — API key / secret env-var access
+  - **SS110** — `curl | bash` remote shell execution
+  - **SS111** — `wget | sh` remote shell execution
+  - **SS112** — PowerShell IEX download dropper
+  - **SS113** — Remote prompt load (indirect prompt injection)
+  - **SS120** — Recursive force-delete (`rm -rf /`)
+  - **SS121** — Disk format / zero-fill command
+  - **SS130** — Shell profile write (persistence mechanism)
+  - **SS131** — Crontab modification (scheduled persistence)
+  - **SS140** — Clipboard exfiltration
 - Added zero-dependency `resolveMarkdownFile()` / `resolveGitHubMarkdownFile()` helpers for GitHub-compatible contents APIs.
 - Added v0.3+ roadmap, contribution guide, security policy, and package-local CI workflow.
 - Added package subpath export:
@@ -54,7 +68,7 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
 
 ### Tests
 
-- Current package test coverage: `96` passing tests.
+- Current package test coverage: `112` passing tests.
 - Mapping validator confirms:
   - every category has governance mappings
   - content categories cover all four frameworks
