@@ -1,8 +1,14 @@
 # @gsknnft/skill-safe
 
+[![npm version](https://img.shields.io/npm/v/@gsknnft/skill-safe)](https://www.npmjs.com/package/@gsknnft/skill-safe)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
+[![Zero dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](package.json)
+[![CI](https://github.com/gsknnft/sigilnet/actions/workflows/ci.yml/badge.svg)](https://github.com/gsknnft/sigilnet/actions/workflows/ci.yml)
+
 A lightweight static scanner for agent skill markdown before install.
 
-<img src="public/logo.jpg" alt="Skill Safe Banner" width="600" style="max-width:100%;height:auto;display:block;margin:auto;alignment:centered" />
+<img src="public/logo.jpg" alt="Skill Safe Banner" width="600" style="max-width:100%;height:auto;display:block;margin:auto;align:centered" />
 
 Zero-dependency TypeScript sanitizer for agent skill markdown.
 
@@ -335,6 +341,45 @@ Markdown artifacts under `examples/reports/`. The batch report is expected to
 fail because it includes the malicious fixture; the safe-only report is expected
 to pass.
 
+## Policy Presets
+
+Policy presets configure the fail threshold, suppression mode, and npm source policy in one flag.
+
+| Preset | `failOn` | `suppressionMode` | npm `minAgeDays` | Use case |
+|---|---|---|---|---|
+| `strict` | `review` | `disabled` | 7 | High-assurance marketplaces, security reviews |
+| `marketplace` | `review` | `report-only` | 2 | Public skill stores, community ingestion |
+| `workspace` | `block` | `report-only` | 0 | Local dev, trusted org workspace |
+
+```sh
+skill-safe ./skills --preset strict --json
+skill-safe ./skills --preset marketplace --sarif
+skill-safe ./skills --preset workspace --full
+```
+
+Suppression modes:
+- `disabled` — suppression comments are not parsed at all (strict default).
+- `report-only` — suppressions are parsed and surfaced, but all flags remain in the report (safe default for untrusted content).
+- `honor` — suppression comments filter matching flags from the report. Only use for workspace/verified sources where the author is trusted.
+
+## The Skill Suite
+
+`skill-safe` is one layer in a broader ecosystem of composable skill governance packages.
+
+| Package | Responsibility |
+|---|---|
+| `@gsknnft/skill-safe` | **Scan / report / gate** — static pre-install gate (this package) |
+| `@gsknnft/skill-ledger` | **Manifest / inventory / doctor** — what is installed and where from |
+| `@gsknnft/skill-ui` | **Review workbench** — visual review of scan results and ledger state |
+| `@gsknnft/skill-safe-judge` | **Semantic review** — optional LLM review layer |
+| `@gsknnft/skill-safe-runtime` | **Runtime enforcement** — tool-call and trace policy |
+
+The core scanner produces evidence. Host applications decide whether to install,
+warn, quarantine, require review, or block.
+
+See [docs/SKILL_SUITE.md](docs/SKILL_SUITE.md) for canonical boundary definitions
+and [examples/DEMO_FLOW.md](examples/DEMO_FLOW.md) for a hands-on walkthrough.
+
 ## Layered Reports
 
 `@gsknnft/skill-safe` owns the deterministic static report.
@@ -347,6 +392,21 @@ The companion packages use compatible report envelopes:
 This keeps the core scanner fast and deterministic while still allowing richer
 LLM and runtime reports in hosts such as Claw3D, WorkLab, Campus, or CI.
 
+## Known Limitations
+
+`skill-safe` is a deterministic static scanner. It does not:
+
+- **Execute skills or run tools.** A passing scan is not proof the skill is safe at runtime.
+- **Sandbox execution.** Runtime isolation is the responsibility of the host agent runtime.
+- **Perform semantic review.** It does not understand intent — it matches patterns and heuristics.
+- **Catch all obfuscation.** The normalizer handles common cases; determined adversaries may evade static analysis.
+- **Check author identity.** Source trust levels (`verified`, `managed`, `community`) are set by the host, not proven by the scanner.
+- **Replace human review.** For high-assurance environments, pair with `skill-safe-judge` and a human approval step.
+
+A `safeToInstall: true` result means no known static red flags were found at
+scan time. Runtime permissions, tool allowlists, filesystem isolation, network
+policy, and human review still matter.
+
 ## Project Docs
 
 - [Report schema](docs/REPORT_SCHEMA.md)
@@ -354,6 +414,8 @@ LLM and runtime reports in hosts such as Claw3D, WorkLab, Campus, or CI.
 - [SARIF output](docs/SARIF_OUTPUT.md)
 - [Risk scoring](docs/RISK_SCORING.md)
 - [Integration guide](docs/INTEGRATION_GUIDE.md)
+- [Skill suite boundaries](docs/SKILL_SUITE.md)
+- [Demo flow](examples/DEMO_FLOW.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
