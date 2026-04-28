@@ -1,1 +1,0 @@
-{"root":["./src/cli.ts","./src/index.ts","./src/integrity.ts","./src/mappings.ts","./src/reporter.ts","./src/resolver.ts","./src/rules.ts","./src/sanitize.ts","./src/sarif.ts","./src/scanner.ts","./src/trust.ts","./src/types.ts"],"version":"5.9.3"}

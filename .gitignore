@@ -6,3 +6,4 @@ dist/
 examples/reports/*.json
 examples/reports/*.md
 !examples/reports/.gitkeep
+tsconfig.tsbuildinfo*
