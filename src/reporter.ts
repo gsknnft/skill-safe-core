@@ -4,8 +4,8 @@ import type {
   SkillScanReport,
 } from "./sanitize.js";
 import type {
-  SkillSafeDocumentReport,
   CreateSkillSafeReportOptions,
+  SkillSafeDocumentReport,
   SkillSafeFullReport,
   SkillSafeReportSummary,
 } from "./types.js";
@@ -67,17 +67,23 @@ export const createSkillSafeReport = ({
   generatedAt = new Date().toISOString(),
 }: CreateSkillSafeReportOptions): SkillSafeFullReport => {
   if (documents.length === 0) {
-    throw new Error("At least one document is required to create a skill-safe report.");
+    throw new Error(
+      "At least one document is required to create a skill-safe report.",
+    );
   }
 
   const categories: Record<string, number> = {};
   for (const document of documents) {
-    for (const [category, count] of Object.entries(document.scan.report.categories)) {
+    for (const [category, count] of Object.entries(
+      document.scan.report.categories,
+    )) {
       categories[category] = (categories[category] ?? 0) + (count ?? 0);
     }
   }
 
-  const recommendedAction = documents.reduce<SkillScanReport["recommendedAction"]>(
+  const recommendedAction = documents.reduce<
+    SkillScanReport["recommendedAction"]
+  >(
     (highest, document) =>
       actionRank[document.scan.report.recommendedAction] > actionRank[highest]
         ? document.scan.report.recommendedAction
@@ -97,14 +103,31 @@ export const createSkillSafeReport = ({
     safeToInstall: documents.every((document) => document.scan.safeToInstall),
     recommendedAction,
     severity,
-    riskScore: Math.max(...documents.map((document) => document.scan.report.riskScore)),
+    riskScore: Math.max(
+      ...documents.map((document) => document.scan.report.riskScore),
+    ),
     documents: documents.length,
-    passed: documents.filter((document) => document.scan.report.recommendedAction === "allow").length,
-    review: documents.filter((document) => document.scan.report.recommendedAction === "review").length,
-    blocked: documents.filter((document) => document.scan.report.recommendedAction === "block").length,
-    findings: documents.reduce((sum, document) => sum + document.scan.flags.length, 0),
-    danger: documents.reduce((sum, document) => sum + document.scan.report.summary.danger, 0),
-    caution: documents.reduce((sum, document) => sum + document.scan.report.summary.caution, 0),
+    passed: documents.filter(
+      (document) => document.scan.report.recommendedAction === "allow",
+    ).length,
+    review: documents.filter(
+      (document) => document.scan.report.recommendedAction === "review",
+    ).length,
+    blocked: documents.filter(
+      (document) => document.scan.report.recommendedAction === "block",
+    ).length,
+    findings: documents.reduce(
+      (sum, document) => sum + document.scan.flags.length,
+      0,
+    ),
+    danger: documents.reduce(
+      (sum, document) => sum + document.scan.report.summary.danger,
+      0,
+    ),
+    caution: documents.reduce(
+      (sum, document) => sum + document.scan.report.summary.caution,
+      0,
+    ),
     hiddenContent: documents.reduce(
       (sum, document) => sum + document.scan.report.summary.hiddenContent,
       0,
@@ -131,10 +154,14 @@ export const createSkillSafeReport = ({
         documents.flatMap((document) => document.scan.report.mappings.owasp),
       ),
       mitreAtlas: uniqueSorted(
-        documents.flatMap((document) => document.scan.report.mappings.mitreAtlas),
+        documents.flatMap(
+          (document) => document.scan.report.mappings.mitreAtlas,
+        ),
       ),
       nistAiRmf: uniqueSorted(
-        documents.flatMap((document) => document.scan.report.mappings.nistAiRmf),
+        documents.flatMap(
+          (document) => document.scan.report.mappings.nistAiRmf,
+        ),
       ),
     },
     documents,
@@ -167,7 +194,9 @@ const formatFindingMarkdown = (
   ];
   if (flag.ruleName) lines.push(`   - Rule: ${flag.ruleName}`);
   if (flag.location) {
-    lines.push(`   - Location: line ${flag.location.line}, column ${flag.location.column}`);
+    lines.push(
+      `   - Location: line ${flag.location.line}, column ${flag.location.column}`,
+    );
   }
   if (flag.normalized) lines.push("   - Normalized match: yes");
   if (full) {
@@ -180,14 +209,16 @@ const formatFindingMarkdown = (
 
 export const formatSkillSafeReportMarkdown = (
   report: SkillSafeFullReport,
-  options: { full?: boolean } = {},
+  options: { full?: boolean; preset?: string } = {},
 ): string => {
   const full = options.full ?? false;
+  const presetLine = options.preset ? `Preset: ${options.preset}` : undefined;
   const lines = [
     "# skill-safe Report",
     "",
     `Generated: ${report.generatedAt}`,
     `Mode: ${report.mode}`,
+    presetLine,
     `Verdict: ${report.ok ? "PASS" : "FAIL"}`,
     `Recommended action: ${report.summary.recommendedAction}`,
     `Severity: ${report.summary.severity}`,
@@ -208,7 +239,7 @@ export const formatSkillSafeReportMarkdown = (
     "",
     "## Categories",
     "",
-  ];
+  ].filter(Boolean);
 
   const categories = Object.entries(report.categories);
   if (categories.length === 0) {

@@ -1,45 +1,31 @@
-# skill-safe Roadmap
+## v0.3.x Shipped
 
-`@gsknnft/skill-safe` should stay the deterministic, zero-runtime-dependency
-gate for agent skill markdown. The core package should remain small,
-auditable, and embeddable in CLIs, marketplaces, local apps, and CI.
-
-## v0.3.x Hardening
-
-- Keep suppressions report-only by default.
-- Add tests for every new rule and every source-level policy.
-- Keep `pnpm validate:mappings` green before release.
-- Keep `pnpm pack --dry-run` clean and free of generated report artifacts.
-- Expand SARIF coverage with stable rule IDs, locations, fingerprints, and
-  governance mappings.
-- Add config-file support only if it stays deterministic and explicit.
-- Keep remote resolving optional and fetch-injected for testability.
-
-## v0.4 Candidates
-
-- Policy presets:
-  - `strict`
-  - `marketplace`
-  - `workspace`
-  - `permissive`
-- `skill-safe.config.json` for CI and marketplace use.
-- Suppression audit mode:
-  - invalid suppressions
-  - unused suppressions
-  - expired suppressions
-- Rule quality fixtures:
-  - benign
-  - malicious
-  - obfuscated
-  - source-policy
-- More source-policy checks:
-  - npm maintainer age
-  - repository archive status
-  - default branch protection signal when available
-  - package/license mismatch warnings
+- Policy presets and CLI flag (`--preset strict|marketplace|workspace`)
+- Rule quality fixtures (benign, malicious, obfuscated, source-policy)
+- More source-policy checks (npm maintainer age, repo archive status, etc.)
 - More static rules:
   - credential file reads
   - SSH key reads
+  - `.env` exfiltration
+  - clipboard exfiltration
+  - recursive delete
+  - shell profile modification
+  - remote prompt loading
+  - `curl | bash` and PowerShell remote execution chains
+- Suppression audit mode and CLI flag (`--audit-suppressions`)
+- SARIF coverage with stable rule IDs, locations, fingerprints, and governance mappings
+- Mapping registry and validation
+- Tests for every new rule and every source-level policy
+- `pnpm validate:mappings` and `pnpm pack --dry-run` as release gates
+- Remote resolving is fetch-injected and testable
+
+## v0.4 Next
+
+- `--audit-suppressions` should emit both the audit and the scan report (not just audit)
+- `--preset` should print in the report header so CI logs are self-documenting
+- Config-file support (`skill-safe.config.json`) if deterministic and explicit
+- More governance mapping coverage and validation
+- More static rule coverage as new threats emerge
   - `.env` exfiltration
   - clipboard exfiltration
   - recursive delete

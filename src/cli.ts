@@ -2,26 +2,28 @@
 import { stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import
-    {
-        createSkillSafeDocumentReport,
-        createSkillSafeReport,
-        formatSkillSafeReportMarkdown,
-        stringifySkillSafeReportJson,
-    } from "./reporter.js";
-import
-    {
-        describeSkillSource,
-        resolveSkillMarkdown,
-    } from "./resolver.js";
-import { appendSanitizationFlags, sanitizeSkillMarkdown, type SuppressionMode } from "./sanitize.js";
+import type { SkillSafePolicyPreset } from "./policy.js";
+import { getPolicyPreset, isPolicyPreset } from "./policy.js";
+import {
+  createSkillSafeDocumentReport,
+  createSkillSafeReport,
+  formatSkillSafeReportMarkdown,
+  stringifySkillSafeReportJson,
+} from "./reporter.js";
+import { describeSkillSource, resolveSkillMarkdown } from "./resolver.js";
+import {
+  appendSanitizationFlags,
+  sanitizeSkillMarkdown,
+  type SuppressionMode,
+} from "./sanitize.js";
 import { stringifySkillSafeSarifJson } from "./sarif.js";
 import { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
+import {
+  auditSuppressions,
+  type SuppressionAuditReport,
+} from "./suppressionAudit.js";
 import { requiresSanitization } from "./trust.js";
-import { getPolicyPreset, isPolicyPreset } from "./policy.js";
-import { auditSuppressions, type SuppressionAuditReport } from "./suppressionAudit.js";
 import type { NpmSourcePolicy, SkillSafeFullReport } from "./types.js";
-import type { SkillSafePolicyPreset } from "./policy.js";
 
 type Args = {
   source: string | null;
@@ -150,7 +152,9 @@ const parseArgs = (argv: string[]): Args => {
     } else if (value === "--preset") {
       const preset = argv[++i] ?? "";
       if (!isPolicyPreset(preset)) {
-        throw new Error("--preset must be one of: strict, marketplace, workspace");
+        throw new Error(
+          "--preset must be one of: strict, marketplace, workspace",
+        );
       }
       const nextPolicy = getPolicyPreset(preset);
       args.preset = nextPolicy.preset;
@@ -178,9 +182,13 @@ const parseArgs = (argv: string[]): Args => {
     }
   }
 
-  const formatFlags = [args.json, args.sarif, args.markdown].filter(Boolean).length;
+  const formatFlags = [args.json, args.sarif, args.markdown].filter(
+    Boolean,
+  ).length;
   if (formatFlags > 1) {
-    throw new Error("Use only one output format: --json, --sarif, or --markdown");
+    throw new Error(
+      "Use only one output format: --json, --sarif, or --markdown",
+    );
   }
 
   return args;
@@ -215,12 +223,18 @@ const severityRank = {
   block: 2,
 } as const;
 
-const shouldFail = (report: SkillSafeFullReport, failOn: Args["failOn"]): boolean => {
+const shouldFail = (
+  report: SkillSafeFullReport,
+  failOn: Args["failOn"],
+): boolean => {
   if (failOn === "never") return false;
   return severityRank[report.summary.recommendedAction] >= severityRank[failOn];
 };
 
-const scanFile = async (filePath: string, args: Args): Promise<SkillSafeFullReport> => {
+const scanFile = async (
+  filePath: string,
+  args: Args,
+): Promise<SkillSafeFullReport> => {
   const absolutePath = resolve(filePath);
   const { report } = await scanSkillFiles([absolutePath], {
     root: dirname(absolutePath),
@@ -230,7 +244,10 @@ const scanFile = async (filePath: string, args: Args): Promise<SkillSafeFullRepo
   return report;
 };
 
-const scanDirectory = async (dirPath: string, args: Args): Promise<SkillSafeFullReport> => {
+const scanDirectory = async (
+  dirPath: string,
+  args: Args,
+): Promise<SkillSafeFullReport> => {
   const { report } = await scanSkillDirectory(resolve(dirPath), {
     suppressionMode: args.suppressionMode,
   });
@@ -238,7 +255,9 @@ const scanDirectory = async (dirPath: string, args: Args): Promise<SkillSafeFull
 };
 
 const scanText = (text: string, args: Args): SkillSafeFullReport => {
-  const scan = sanitizeSkillMarkdown(text, { suppressionMode: args.suppressionMode });
+  const scan = sanitizeSkillMarkdown(text, {
+    suppressionMode: args.suppressionMode,
+  });
   return createSkillSafeReport({
     mode: "text",
     documents: [
@@ -257,14 +276,19 @@ const scanText = (text: string, args: Args): SkillSafeFullReport => {
   });
 };
 
-const scanSource = async (source: string, args: Args): Promise<SkillSafeFullReport> => {
+const scanSource = async (
+  source: string,
+  args: Args,
+): Promise<SkillSafeFullReport> => {
   const descriptor = describeSkillSource(source);
   const resolved = await resolveSkillMarkdown(source, {
     npmPolicy: args.npmPolicy,
   });
   const scan = requiresSanitization(resolved.trust)
     ? appendSanitizationFlags(
-        sanitizeSkillMarkdown(resolved.markdown, { suppressionMode: args.suppressionMode }),
+        sanitizeSkillMarkdown(resolved.markdown, {
+          suppressionMode: args.suppressionMode,
+        }),
         resolved.sourceFlags,
       )
     : null;
@@ -281,7 +305,9 @@ const scanSource = async (source: string, args: Args): Promise<SkillSafeFullRepo
         directlyResolvable: descriptor.directlyResolvable,
         sanitized: requiresSanitization(resolved.trust),
         content: resolved.markdown,
-        scan: scan ?? sanitizeSkillMarkdown("", { suppressionMode: args.suppressionMode }),
+        scan:
+          scan ??
+          sanitizeSkillMarkdown("", { suppressionMode: args.suppressionMode }),
       }),
     ],
   });
@@ -290,7 +316,10 @@ const scanSource = async (source: string, args: Args): Promise<SkillSafeFullRepo
 const renderReport = (report: SkillSafeFullReport, args: Args): string => {
   if (args.json) return stringifySkillSafeReportJson(report);
   if (args.sarif) return stringifySkillSafeSarifJson(report);
-  return formatSkillSafeReportMarkdown(report, { full: args.full });
+  return formatSkillSafeReportMarkdown(report, {
+    full: args.full,
+    preset: args.preset,
+  });
 };
 
 async function main(): Promise<void> {
@@ -304,7 +333,9 @@ async function main(): Promise<void> {
     (value) => value !== null,
   ).length;
   if (selectedModes > 1) {
-    throw new Error("Use only one input mode: source, --file, --dir, or --text");
+    throw new Error(
+      "Use only one input mode: source, --file, --dir, or --text",
+    );
   }
 
   let report: SkillSafeFullReport;
@@ -331,7 +362,21 @@ async function main(): Promise<void> {
   }
 
   const audit = args.auditSuppressions ? auditSuppressions(report) : null;
-  const output = audit ? renderSuppressionAudit(audit, args) : renderReport(report, args);
+
+  let output: string;
+  if (args.json) {
+    // Emit a single JSON envelope so consumers can parse everything in one pass.
+    const envelope: Record<string, unknown> = { report };
+    if (audit) envelope.suppressionAudit = audit;
+    output = `${JSON.stringify(envelope, null, 2)}\n`;
+  } else if (args.auditSuppressions) {
+    // Always emit both the report and the audit in human-readable mode.
+    output = renderReport(report, args);
+    if (audit) output += `\n${renderSuppressionAudit(audit, args)}`;
+  } else {
+    output = renderReport(report, args);
+  }
+
   if (args.out) {
     await writeFile(args.out, output, "utf8");
   }
