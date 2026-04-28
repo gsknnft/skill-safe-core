@@ -1,0 +1,122 @@
+name: skill-safe Security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "dev/**"
+  schedule:
+    # Weekly Monday 08:00 UTC — catches new CVEs against pinned deps
+    - cron: "0 8 * * 1"
+
+permissions:
+  contents: read
+  security-events: write   # required to upload SARIF to GitHub Code Scanning
+
+jobs:
+  # ─── Dependency audit ───────────────────────────────────────────────────────
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: pnpm audit
+        # audit only production deps (devDeps are not shipped)
+        run: pnpm audit --prod --audit-level moderate
+
+  # ─── Self-scan: run skill-safe against its own example skills ───────────────
+  self-scan:
+    name: Self-scan (SARIF upload)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      # Scan examples/skills and write SARIF — exit-code 0 so CI does not fail
+      # on intentional malicious fixture (shadow-maintainer is a bad actor demo)
+      - name: Scan example skills (SARIF)
+        run: |
+          node dist/cli.js \
+            --dir examples/skills \
+            --sarif \
+            --fail-on never \
+            --out skill-safe-results.sarif
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: skill-safe-results.sarif
+          category: skill-safe
+
+  # ─── Verify the published package surface hasn't grown unexpectedly ─────────
+  supply-chain:
+    name: Supply Chain Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Confirm zero runtime dependencies
+        run: |
+          count=$(node -e "
+            const pkg = JSON.parse(require('fs').readFileSync('package.json','utf8'));
+            const deps = Object.keys(pkg.dependencies ?? {});
+            console.log(deps.length);
+          ")
+          if [ "$count" -ne 0 ]; then
+            echo "ERROR: package has $count runtime dependency/dependencies — must be zero."
+            exit 1
+          fi
+          echo "OK: zero runtime dependencies."
+
+      - name: Build
+        run: pnpm build
+
+      - name: Pack and inspect tarball contents
+        run: |
+          pnpm pack --dry-run 2>&1 | tee pack-contents.txt
+          # Fail if dist/cli.js is missing (would produce a broken package)
+          grep -q "dist/cli.js" pack-contents.txt || (echo "ERROR: dist/cli.js not in tarball" && exit 1)
+          # Fail if test files leaked into the tarball
+          if grep -q "tests/" pack-contents.txt; then
+            echo "ERROR: test files are in the tarball"
+            exit 1
+          fi
+          echo "OK: tarball contents look clean."
