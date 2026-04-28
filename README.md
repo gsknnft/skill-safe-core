@@ -115,7 +115,7 @@ Human output includes:
 JSON output preserves the complete report envelope:
 
 ```sh
-skill-safe github:HashLips/agent-skills --json > report.json
+skill-safe github:gsknnft/agent-skills --json > report.json
 skill-safe ./skills --json > marketplace-report.json
 ```
 
