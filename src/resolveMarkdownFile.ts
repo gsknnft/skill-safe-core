@@ -1,6 +1,70 @@
 import type { GitHubContentResponse, GitHubContentFile, GitHubContentDirectory, ResolvedMarkdownFile, ResolveMarkdownFileOptions } from "./types.js";
+import { PREFERRED_MARKDOWN_FILES } from "./constants.js";
 
-const PREFERRED_MARKDOWN_FILES = ["SKILL.md", "skill.md", "README.md", "readme.md", "index.md"];
+/**
+ * Resolve a markdown file URL from a GitHub repository, using the GitHub
+ * Contents API. Handles both direct file references and directory listings,
+ * with optional recursive scanning of subdirectories.
+ *
+ * Recognizes:
+ *   - github:<owner>/<repo>[@branch][/path]
+ *
+ * If the path points directly to a markdown file, that file is returned.
+ * If the path points to a directory, that directory is scanned for markdown
+ * files, prioritizing those in PREFERRED_MARKDOWN_FILES. Optionally, one
+ * level of subdirectories can also be scanned.
+ *
+ * Returns the resolved download URL of the markdown file, or throws an error
+ * if no suitable file is found or if any fetch operation fails.
+ * Note: GitHub API rate limits apply. Providing a GITHUB_TOKEN with appropriate
+ * scopes can increase limits and access private repositories.
+ *
+ * @param options - Configuration for resolving the markdown file, including
+ *   repository details, API URL, authentication token, and scanning preferences.
+ * @returns An object containing the resolved markdown file URL and related metadata.
+ * @throws Error if resolution fails due to missing parameters, fetch errors, or
+ *   if no markdown file is found in the specified location.
+ * @see GitHub Contents API: https://docs.github.com/en/rest/repos/contents
+ * @see GitHub API Authentication: https://docs.github.com/en/rest/overview/authenticating-to-the-rest-api
+ * @see GitHub API Rate Limiting: https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting
+ * @see PREFERRED_MARKDOWN_FILES for default file prioritization.
+ * @remarks This function is designed for use within the skill-safe framework to locate
+ * markdown files that define agent skills. It abstracts away the details of
+ * interacting with the GitHub API and provides a consistent interface for
+ * retrieving skill definitions from repositories.
+ * @example
+ * // Resolve a markdown file from a GitHub repository
+ * const resolved = await resolveMarkdownFile({
+ *   source: "github",
+ *   owner: "HashLips",
+ *   repo: "agent-skills",
+ *   branch: "main",
+ *   path: "README.md"
+ * });
+ * console.log(resolved.resolvedUrl); // URL to the raw markdown file
+ *
+ * // Resolve a markdown file from a directory, prioritizing PREFERRED_MARKDOWN_FILES
+ * const resolved = await resolveMarkdownFile({
+ *   source: "github",
+ *   owner: "HashLips",
+ *   repo: "agent-skills",
+ *   branch: "main",
+ *   path: "docs"
+ * });
+ * console.log(resolved.resolvedUrl); // URL to the raw markdown file
+ *
+ * // Resolve a markdown file with recursive subdirectory scanning
+ * const resolved = await resolveMarkdownFile({
+ *   source: "github",
+ *   owner: "HashLips",
+ *   repo: "agent-skills",
+ *   branch: "main",
+ *   path: "docs",
+ *   scanSubdirectories: true
+ * });
+ * console.log(resolved.resolvedUrl); // URL to the raw markdown file
+ * 
+ */
 
 const getProcessEnv = (key: string): string | undefined => {
   if (typeof process === "undefined") return undefined;

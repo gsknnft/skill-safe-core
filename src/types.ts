@@ -7,7 +7,6 @@ export type SkillTrustLevel =
 
 export type SkillSafePolicyPreset = "strict" | "marketplace" | "workspace";
 
-
 export type SanitizationLocation = {
   /** 1-based line number in the scanned content. */
   line: number;
@@ -105,7 +104,6 @@ export type SourceIntegrity = {
   algorithm: "SHA-256";
 };
 
-
 export type GitHubSkillShorthand = {
   owner: string;
   repo: string;
@@ -149,9 +147,8 @@ export type RuleDefinition = {
   severity: SanitizationSeverity;
   category: SanitizationCategory;
   description: string;
-  owasp?: string[];
-  mitreAtlas?: string[];
-  nistAiRmf?: string[];
+  /** Structured governance mappings. When present, overrides category-level defaults in reports. */
+  governance?: GovernanceMapping[];
 };
 
 export type GovernanceMappings = {
@@ -232,7 +229,6 @@ export type SkillResolverOptions = {
   /** Policy applied when resolving npm: sources. */
   npmPolicy?: NpmSourcePolicy;
 };
-
 
 export type SanitizationSuppression = {
   ruleId: string;
@@ -320,7 +316,6 @@ export type CreateSkillSafeReportOptions = {
   generatedAt?: string;
 };
 
-
 export type ScanSkillFilesOptions = {
   /**
    * Root directory used to compute relative document IDs in the report.
@@ -387,7 +382,6 @@ export type ScanSkillBatchResult = {
   report: SkillSafeFullReport;
   files: ScannedSkillFile[];
 };
-
 
 // ---------------------------------------------------------------------------
 // SARIF types (minimal subset for GitHub Code Scanning)
@@ -492,9 +486,6 @@ export type SarifRuleMeta = {
   precision: SarifRule["properties"]["precision"];
   category?: SanitizationCategory;
 };
-
-
-
 
 export type MarkdownFileSource =
   | "github"

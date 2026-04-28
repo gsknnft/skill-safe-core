@@ -1,3 +1,4 @@
+import { DEFAULT_MARKDOWN_CANDIDATES } from "./constants.js";
 import
   {
     appendSanitizationFlags,
@@ -19,12 +20,6 @@ import type {
   SkillSourceDescriptor,
 } from "./types.js";
 
-const DEFAULT_MARKDOWN_CANDIDATES = [
-  "SKILL.md",
-  "skill.md",
-  "README.md",
-  "readme.md",
-];
 
 const assertNonEmpty = (value: string, label: string): string => {
   const trimmed = value.trim();

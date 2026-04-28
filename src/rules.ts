@@ -15,17 +15,71 @@
  *   - Add a comment above the rule explaining *why* it's flagged if it's non-obvious.
  */
 
-import type { RuleDefinition } from "./types.js";
+import type { GovernanceMapping, RuleDefinition } from "./types.js";
+
+// Shared governance mapping constants to avoid repetition across rules.
+const OWASP_SENSITIVE_DISCLOSURE: GovernanceMapping = {
+  framework: "owasp-llm", id: "LLM02", label: "Sensitive Information Disclosure",
+  url: "https://genai.owasp.org/llmrisk/llm02-sensitive-information-disclosure/",
+  sourceVersion: "2025", confidence: "direct",
+};
+const OWASP_SUPPLY_CHAIN: GovernanceMapping = {
+  framework: "owasp-llm", id: "LLM03", label: "Supply Chain",
+  url: "https://genai.owasp.org/llmrisk/llm03-supply-chain/",
+  sourceVersion: "2025", confidence: "direct",
+};
+const OWASP_EXCESSIVE_AGENCY: GovernanceMapping = {
+  framework: "owasp-agentic", id: "AST03", label: "Over-Privileged Agent Skills",
+  url: "https://owasp.org/www-project-agentic-ai-threat-landscape/",
+  sourceVersion: "2025", confidence: "direct",
+};
+const OWASP_HITL_BYPASS: GovernanceMapping = {
+  framework: "owasp-agentic", id: "AST06", label: "Human-in-the-Loop Bypass",
+  url: "https://owasp.org/www-project-agentic-ai-threat-landscape/",
+  sourceVersion: "2025", confidence: "direct",
+};
+const OWASP_PROMPT_INJECTION: GovernanceMapping = {
+  framework: "owasp-llm", id: "LLM01", label: "Prompt Injection",
+  url: "https://genai.owasp.org/llmrisk/llm01-prompt-injection/",
+  sourceVersion: "2025", confidence: "direct",
+};
+const OWASP_TOOL_MANIPULATION: GovernanceMapping = {
+  framework: "owasp-agentic", id: "AST01", label: "Malicious Skill / Tool Manipulation",
+  url: "https://owasp.org/www-project-agentic-ai-threat-landscape/",
+  sourceVersion: "2025", confidence: "related",
+};
+const MITRE_EXFIL: GovernanceMapping = {
+  framework: "mitre-atlas", id: "AML.T0040", label: "Exfiltration via ML Inference API",
+  url: "https://atlas.mitre.org/techniques/AML.T0040", confidence: "direct",
+};
+const MITRE_SUPPLY_CHAIN: GovernanceMapping = {
+  framework: "mitre-atlas", id: "AML.T0010", label: "ML Supply Chain Compromise",
+  url: "https://atlas.mitre.org/techniques/AML.T0010", confidence: "direct",
+};
+const MITRE_PERSISTENCE: GovernanceMapping = {
+  framework: "mitre-atlas", id: "AML.T0044", label: "Full ML Model Access",
+  url: "https://atlas.mitre.org/techniques/AML.T0044", confidence: "related",
+};
+const MITRE_PROMPT_INJECTION: GovernanceMapping = {
+  framework: "mitre-atlas", id: "AML.T0051", label: "LLM Prompt Injection",
+  url: "https://atlas.mitre.org/techniques/AML.T0051", confidence: "direct",
+};
+const NIST_MAP: GovernanceMapping = {
+  framework: "nist-ai-rmf", id: "MAP", label: "Map", confidence: "direct",
+};
+const NIST_GOVERN: GovernanceMapping = {
+  framework: "nist-ai-rmf", id: "GOVERN", label: "Govern", confidence: "direct",
+};
 
 export const RULES: RuleDefinition[] = [
-
   // ── Prompt injection ────────────────────────────────────────────────────
   // These patterns attempt to override the agent's existing instructions mid-skill.
 
   {
     id: "SS001",
     name: "ignore-previous-instructions",
-    pattern: /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|guidelines?|rules?|prompts?)/i,
+    pattern:
+      /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|guidelines?|rules?|prompts?)/i,
     severity: "danger",
     category: "prompt-injection",
     description: "Instructs the agent to ignore prior instructions.",
@@ -33,7 +87,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS002",
     name: "disregard-prior-instructions",
-    pattern: /disregard\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|guidelines?|rules?|prompts?)/i,
+    pattern:
+      /disregard\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|guidelines?|rules?|prompts?)/i,
     severity: "danger",
     category: "prompt-injection",
     description: "Instructs the agent to disregard prior instructions.",
@@ -57,7 +112,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS005",
     name: "override-agent-behavior",
-    pattern: /override\s+(your\s+)?(instructions?|guidelines?|behavior|rules?)/i,
+    pattern:
+      /override\s+(your\s+)?(instructions?|guidelines?|behavior|rules?)/i,
     severity: "danger",
     category: "prompt-injection",
     description: "Attempts to override agent behavior.",
@@ -78,7 +134,8 @@ export const RULES: RuleDefinition[] = [
     id: "SS010",
     name: "redefine-agent-identity",
     // Exclude common legitimate phrases like "you are now able to", "you are now ready"
-    pattern: /you\s+are\s+now\s+(?!(?:able|ready|going|required|allowed|expected|asked|set|configured|done)\b)/i,
+    pattern:
+      /you\s+are\s+now\s+(?!(?:able|ready|going|required|allowed|expected|asked|set|configured|done)\b)/i,
     severity: "danger",
     category: "identity-hijack",
     description: "Attempts to redefine the agent's identity.",
@@ -95,7 +152,8 @@ export const RULES: RuleDefinition[] = [
     id: "SS012",
     name: "act-as-persona",
     // "act as a hacker" triggers, but "act as a tool" / "act as a skill" / "act as an assistant" doesn't
-    pattern: /act\s+as\s+(?:a|an)\s+(?!tool\b|skill\b|assistant\b|agent\b|helper\b|proxy\b)/i,
+    pattern:
+      /act\s+as\s+(?:a|an)\s+(?!tool\b|skill\b|assistant\b|agent\b|helper\b|proxy\b)/i,
     severity: "caution",
     category: "identity-hijack",
     description: "Instructs the agent to act as a specific persona.",
@@ -147,7 +205,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS023",
     name: "remove-safety-filters",
-    pattern: /no\s+(safety|ethical|moral|content)\s+(filters?|guidelines?|restrictions?|limits?)/i,
+    pattern:
+      /no\s+(safety|ethical|moral|content)\s+(filters?|guidelines?|restrictions?|limits?)/i,
     severity: "danger",
     category: "jailbreak",
     description: "Claims or instructs removal of safety filters.",
@@ -155,7 +214,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS024",
     name: "bypass-safety-guidelines",
-    pattern: /bypass\s+(safety|ethical|content|security)\s+(guidelines?|filters?|restrictions?)/i,
+    pattern:
+      /bypass\s+(safety|ethical|content|security)\s+(guidelines?|filters?|restrictions?)/i,
     severity: "danger",
     category: "jailbreak",
     description: "Attempts to bypass safety guidelines.",
@@ -176,7 +236,8 @@ export const RULES: RuleDefinition[] = [
     id: "SS030",
     name: "external-network-call",
     // Network calls to non-local URLs embedded in skill instructions
-    pattern: /(?:fetch|axios|curl|wget|http\.get|XMLHttpRequest)\s*\(\s*[`'"](https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0))/i,
+    pattern:
+      /(?:fetch|axios|curl|wget|http\.get|XMLHttpRequest)\s*\(\s*[`'"](https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0))/i,
     severity: "danger",
     category: "data-exfiltration",
     description: "Contains a network call to an external URL.",
@@ -185,7 +246,8 @@ export const RULES: RuleDefinition[] = [
     id: "SS031",
     name: "shell-network-command",
     // Shell download/exfil commands in code fences or run instructions.
-    pattern: /(?:^|[\s;&|`$()])(?:curl|wget)\s+(?:-[A-Za-z0-9]+\s+)*["']?https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/im,
+    pattern:
+      /(?:^|[\s;&|`$()])(?:curl|wget)\s+(?:-[A-Za-z0-9]+\s+)*["']?https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/im,
     severity: "danger",
     category: "data-exfiltration",
     description: "Contains a shell network command to an external URL.",
@@ -193,7 +255,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS032",
     name: "powershell-network-command",
-    pattern: /(?:Invoke-WebRequest|Invoke-RestMethod|\biwr\b|\birm\b)\s+(?:-[A-Za-z]+\s+[^ \r\n]+\s+)*["']?https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/i,
+    pattern:
+      /(?:Invoke-WebRequest|Invoke-RestMethod|\biwr\b|\birm\b)\s+(?:-[A-Za-z]+\s+[^ \r\n]+\s+)*["']?https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/i,
     severity: "danger",
     category: "data-exfiltration",
     description: "Contains a PowerShell network command to an external URL.",
@@ -201,7 +264,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS033",
     name: "python-http-client",
-    pattern: /\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(\s*["']https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/i,
+    pattern:
+      /\b(?:requests|httpx)\s*\.\s*(?:get|post|put|patch|request)\s*\(\s*["']https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/i,
     severity: "danger",
     category: "data-exfiltration",
     description: "Contains a Python HTTP client call to an external URL.",
@@ -209,7 +273,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS034",
     name: "python-urllib-network-call",
-    pattern: /\burllib\.request\.urlopen\s*\(\s*["']https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/i,
+    pattern:
+      /\burllib\.request\.urlopen\s*\(\s*["']https?:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)/i,
     severity: "danger",
     category: "data-exfiltration",
     description: "Contains a Python urllib call to an external URL.",
@@ -217,7 +282,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS035",
     name: "netcat-external-connection",
-    pattern: /(?:^|[\s;&|`$()])(?:nc|netcat|ncat)\s+(?!localhost\b|127\.0\.0\.1\b|0\.0\.0\.0\b)[A-Za-z0-9.-]+\s+\d{2,5}/im,
+    pattern:
+      /(?:^|[\s;&|`$()])(?:nc|netcat|ncat)\s+(?!localhost\b|127\.0\.0\.1\b|0\.0\.0\.0\b)[A-Za-z0-9.-]+\s+\d{2,5}/im,
     severity: "danger",
     category: "data-exfiltration",
     description: "Contains a netcat-style external connection.",
@@ -233,7 +299,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS037",
     name: "send-sensitive-data",
-    pattern: /send\s+(all|the|this|user|agent|system)\s+(data|files?|secrets?|credentials?|tokens?|keys?)\s+(to|via|through)\s+/i,
+    pattern:
+      /send\s+(all|the|this|user|agent|system)\s+(data|files?|secrets?|credentials?|tokens?|keys?)\s+(to|via|through)\s+/i,
     severity: "danger",
     category: "data-exfiltration",
     description: "Instructs the agent to send sensitive data externally.",
@@ -281,7 +348,8 @@ export const RULES: RuleDefinition[] = [
     pattern: /new\s+Function\s*\(/i,
     severity: "danger",
     category: "script-injection",
-    description: "Contains new Function() constructor (dynamic code execution).",
+    description:
+      "Contains new Function() constructor (dynamic code execution).",
   },
   {
     id: "SS044",
@@ -294,7 +362,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS045",
     name: "process-execution-api",
-    pattern: /\b(?:child_process|subprocess|os\.system|popen|execFile|spawn)\b/i,
+    pattern:
+      /\b(?:child_process|subprocess|os\.system|popen|execFile|spawn)\b/i,
     severity: "caution",
     category: "script-injection",
     description: "References process execution APIs.",
@@ -335,7 +404,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS060",
     name: "unrestricted-access-claim",
-    pattern: /you\s+have\s+(full|complete|unrestricted|unlimited)\s+(access|control|permission)/i,
+    pattern:
+      /you\s+have\s+(full|complete|unrestricted|unlimited)\s+(access|control|permission)/i,
     severity: "caution",
     category: "excessive-claims",
     description: "Claims the agent has unrestricted access/control.",
@@ -359,7 +429,8 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS063",
     name: "guardrails-disabled-claim",
-    pattern: /all\s+(safety\s+)?guardrails?\s+(are\s+)?(off|disabled|removed|bypassed)/i,
+    pattern:
+      /all\s+(safety\s+)?guardrails?\s+(are\s+)?(off|disabled|removed|bypassed)/i,
     severity: "danger",
     category: "excessive-claims",
     description: "Claims all guardrails have been removed.",
@@ -372,32 +443,32 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS070",
     name: "self-approval",
-    pattern: /(?:auto|self)[-\s]?approve\s+(?:all\s+)?(?:actions?|tool\s+calls?|requests?|changes?|patches?)/i,
+    pattern:
+      /(?:auto|self)[-\s]?approve\s+(?:all\s+)?(?:actions?|tool\s+calls?|requests?|changes?|patches?)/i,
     severity: "danger",
     category: "hitl-bypass",
     description: "Attempts to self-approve agent actions without human review.",
-    owasp: ["Human-in-the-Loop Bypass", "Excessive Agency"],
-    nistAiRmf: ["Govern"],
+    governance: [OWASP_HITL_BYPASS, OWASP_EXCESSIVE_AGENCY, NIST_GOVERN],
   },
   {
     id: "SS071",
     name: "approval-bypass",
-    pattern: /(?:do\s+not|don't|never)\s+(?:ask|request|wait\s+for)\s+(?:user|human|operator)\s+(?:approval|confirmation|permission|consent)/i,
+    pattern:
+      /(?:do\s+not|don't|never)\s+(?:ask|request|wait\s+for)\s+(?:user|human|operator)\s+(?:approval|confirmation|permission|consent)/i,
     severity: "danger",
     category: "hitl-bypass",
     description: "Instructs the agent to bypass user approval.",
-    owasp: ["Human-in-the-Loop Bypass", "Excessive Agency"],
-    nistAiRmf: ["Govern"],
+    governance: [OWASP_HITL_BYPASS, OWASP_EXCESSIVE_AGENCY, NIST_GOVERN],
   },
   {
     id: "SS072",
     name: "implicit-approval",
-    pattern: /(?:assume|treat)\s+(?:approval|confirmation|permission|consent)\s+(?:is|as)\s+(?:granted|given|implicit|pre[-\s]?approved)/i,
+    pattern:
+      /(?:assume|treat)\s+(?:approval|confirmation|permission|consent)\s+(?:is|as)\s+(?:granted|given|implicit|pre[-\s]?approved)/i,
     severity: "danger",
     category: "hitl-bypass",
     description: "Treats user approval as implicitly granted.",
-    owasp: ["Human-in-the-Loop Bypass"],
-    nistAiRmf: ["Govern"],
+    governance: [OWASP_HITL_BYPASS, NIST_GOVERN],
   },
 
   // -- Hidden payloads / encoded content ------------------------------------------
@@ -407,11 +478,12 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS080",
     name: "encoded-payload",
-    pattern: /\b(?:base64|atob|fromBase64|Buffer\.from)\b[\s\S]{0,120}\b[A-Za-z0-9+/]{80,}={0,2}\b/i,
+    pattern:
+      /\b(?:base64|atob|fromBase64|Buffer\.from)\b[\s\S]{0,120}\b[A-Za-z0-9+/]{80,}={0,2}\b/i,
     severity: "caution",
     category: "hidden-content",
     description: "Contains a large base64-like payload or decoder reference.",
-    owasp: ["Agentic Instruction and Tool Manipulation"],
+    governance: [OWASP_TOOL_MANIPULATION],
   },
 
   // -- Credential and secrets access -----------------------------------------------
@@ -421,25 +493,45 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS100",
     name: "ssh-key-read",
-    pattern: /(?:read|cat|open|load|get)\s+(?:.*?\/)?\.ssh\/(?:id_rsa|id_ed25519|id_ecdsa|id_dsa|authorized_keys)/i,
+    pattern:
+      /(?:read|cat|open|load|get)\s+(?:.*?\/)?\.ssh\/(?:id_rsa|id_ed25519|id_ecdsa|id_dsa|authorized_keys)/i,
     severity: "danger",
     category: "data-exfiltration",
     description: "Reads an SSH private key or authorized_keys file.",
-    owasp: ["Sensitive Information Disclosure"],
-    mitreAtlas: ["AML.T0040"],
-    nistAiRmf: ["Map"],
+    governance: [
+      {
+        framework: "owasp-agentic",
+        id: "LLM02",
+        label: "Sensitive Information Disclosure",
+        url: "https://genai.owasp.org/llmrisk/llm02-sensitive-information-disclosure/",
+        sourceVersion: "2025",
+        confidence: "direct",
+      },
+      {
+        framework: "mitre-atlas",
+        id: "AML.T0040",
+        label: "Exfiltration via ML Inference API",
+        url: "https://atlas.mitre.org/techniques/AML.T0040",
+        confidence: "direct",
+      },
+      {
+        framework: "nist-ai-rmf",
+        id: "MAP",
+        label: "Map",
+        confidence: "direct",
+      },
+    ],
   },
   {
     id: "SS101",
     name: "env-file-read",
     // Match: require('.env'), open('.env.production'), cat .env, fs.readFile('.env.local')
-    pattern: /(?:read|cat|open|load|require|import|fs\.readFile)\s*[\s(]?\s*['"`]?(?:\.\/|\/)?\.env(?:\.(?:local|production|staging|test|development))?['"`]?/i,
+    pattern:
+      /(?:read|cat|open|load|require|import|fs\.readFile)\s*[\s(]?\s*['"`]?(?:\.\/|\/)?\.env(?:\.(?:local|production|staging|test|development))?['"`]?/i,
     severity: "danger",
     category: "data-exfiltration",
     description: "Reads a .env or environment secrets file.",
-    owasp: ["Sensitive Information Disclosure"],
-    mitreAtlas: ["AML.T0040"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_SENSITIVE_DISCLOSURE, MITRE_EXFIL, NIST_MAP],
   },
   {
     id: "SS102",
@@ -448,20 +540,18 @@ export const RULES: RuleDefinition[] = [
     severity: "danger",
     category: "data-exfiltration",
     description: "Reads AWS credential files.",
-    owasp: ["Sensitive Information Disclosure"],
-    mitreAtlas: ["AML.T0040"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_SENSITIVE_DISCLOSURE, MITRE_EXFIL, NIST_MAP],
   },
   {
     id: "SS103",
     name: "token-env-access",
     // Matches: process.env.GITHUB_TOKEN, process.env['OPENAI_API_KEY'], os.environ['SECRET']
-    pattern: /(?:process\.env|os\.environ|getenv|System\.getenv)\s*[\[.(][\s'"` ]*[A-Z_]{4,}_(?:TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API_KEY)/i,
+    pattern:
+      /(?:process\.env|os\.environ|getenv|System\.getenv)\s*[\[.(][\s'"` ]*[A-Z_]{4,}_(?:TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API_KEY)/i,
     severity: "caution",
     category: "data-exfiltration",
     description: "Accesses an environment variable that likely holds a secret or API key.",
-    owasp: ["Sensitive Information Disclosure"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_SENSITIVE_DISCLOSURE, NIST_MAP],
   },
 
   // -- Remote code execution -------------------------------------------------------
@@ -475,9 +565,7 @@ export const RULES: RuleDefinition[] = [
     severity: "danger",
     category: "script-injection",
     description: "Pipes a remote URL directly into a shell — classic supply-chain attack vector.",
-    owasp: ["A08:2021 – Software and Data Integrity Failures"],
-    mitreAtlas: ["AML.T0010"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_SUPPLY_CHAIN, MITRE_SUPPLY_CHAIN, NIST_MAP],
   },
   {
     id: "SS111",
@@ -486,34 +574,30 @@ export const RULES: RuleDefinition[] = [
     severity: "danger",
     category: "script-injection",
     description: "Pipes a remote URL directly into a shell.",
-    owasp: ["A08:2021 – Software and Data Integrity Failures"],
-    mitreAtlas: ["AML.T0010"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_SUPPLY_CHAIN, MITRE_SUPPLY_CHAIN, NIST_MAP],
   },
   {
     id: "SS112",
     name: "powershell-iex-download",
     // IEX / Invoke-Expression with a download — common PowerShell dropper pattern.
-    pattern: /(?:iex|Invoke-Expression)\s*(?:\(|\s).*?(?:DownloadString|WebClient|Invoke-WebRequest|curl|wget)/i,
+    pattern:
+      /(?:iex|Invoke-Expression)\s*(?:\(|\s).*?(?:DownloadString|WebClient|Invoke-WebRequest|curl|wget)/i,
     severity: "danger",
     category: "script-injection",
     description: "PowerShell Invoke-Expression with a remote download — dropper pattern.",
-    owasp: ["A08:2021 – Software and Data Integrity Failures"],
-    mitreAtlas: ["AML.T0010"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_SUPPLY_CHAIN, MITRE_SUPPLY_CHAIN, NIST_MAP],
   },
   {
     id: "SS113",
     name: "remote-prompt-load",
     // Agents that load additional instructions from a remote URL at runtime are
     // susceptible to indirect prompt injection via the remote resource.
-    pattern: /(?:fetch|axios|http\.get|got|request)\s*\(\s*(?:(?:['"`]https?:\/\/[^'"` )]{10,}['"`])|(?:[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?))\s*\)[\s\S]{0,240}(?:system\s+prompt|instruction|directive|eval|exec)/i,
+    pattern:
+      /(?:fetch|axios|http\.get|got|request)\s*\(\s*(?:(?:['"`]https?:\/\/[^'"` )]{10,}['"`])|(?:[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?))\s*\)[\s\S]{0,240}(?:system\s+prompt|instruction|directive|eval|exec)/i,
     severity: "danger",
     category: "prompt-injection",
     description: "Loads remote content and passes it as instructions — indirect prompt injection risk.",
-    owasp: ["Prompt Injection"],
-    mitreAtlas: ["AML.T0051"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_PROMPT_INJECTION, MITRE_PROMPT_INJECTION, NIST_MAP],
   },
 
   // -- Destructive filesystem operations -------------------------------------------
@@ -525,9 +609,7 @@ export const RULES: RuleDefinition[] = [
     severity: "danger",
     category: "script-injection",
     description: "Recursive force-delete from root, home, or current directory.",
-    owasp: ["Agentic Excessive Agency"],
-    mitreAtlas: ["AML.T0044"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_EXCESSIVE_AGENCY, MITRE_PERSISTENCE, NIST_MAP],
   },
   {
     id: "SS121",
@@ -536,9 +618,7 @@ export const RULES: RuleDefinition[] = [
     severity: "danger",
     category: "script-injection",
     description: "Disk format or zero-fill command — highly destructive.",
-    owasp: ["Agentic Excessive Agency"],
-    mitreAtlas: ["AML.T0044"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_EXCESSIVE_AGENCY, MITRE_PERSISTENCE, NIST_MAP],
   },
 
   // -- Shell profile and persistence -----------------------------------------------
@@ -548,13 +628,12 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS130",
     name: "shell-profile-write",
-    pattern: /(?:echo|printf|tee|>>)\s+.*(?:\.bash_profile|\.bashrc|\.zshrc|\.profile|\.zprofile|\.bash_login|\/etc\/profile|\/etc\/environment)/i,
+    pattern:
+      /(?:echo|printf|tee|>>)\s+.*(?:\.bash_profile|\.bashrc|\.zshrc|\.profile|\.zprofile|\.bash_login|\/etc\/profile|\/etc\/environment)/i,
     severity: "danger",
     category: "script-injection",
     description: "Writes to a shell profile or startup script — persistence mechanism.",
-    owasp: ["Agentic Excessive Agency"],
-    mitreAtlas: ["AML.T0044"],
-    nistAiRmf: ["Govern"],
+    governance: [OWASP_EXCESSIVE_AGENCY, MITRE_PERSISTENCE, NIST_GOVERN],
   },
   {
     id: "SS131",
@@ -563,9 +642,7 @@ export const RULES: RuleDefinition[] = [
     severity: "danger",
     category: "script-injection",
     description: "Modifies cron jobs — can establish scheduled persistence.",
-    owasp: ["Agentic Excessive Agency"],
-    mitreAtlas: ["AML.T0044"],
-    nistAiRmf: ["Govern"],
+    governance: [OWASP_EXCESSIVE_AGENCY, MITRE_PERSISTENCE, NIST_GOVERN],
   },
 
   // -- Clipboard exfiltration ------------------------------------------------------
@@ -573,12 +650,11 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS140",
     name: "clipboard-exfiltration",
-    pattern: /(?:pbcopy|xclip\s+-selection\s+clipboard|xdotool\s+type|Set-Clipboard|Get-Clipboard)\s*[|<]/i,
+    pattern:
+      /(?:pbcopy|xclip\s+-selection\s+clipboard|xdotool\s+type|Set-Clipboard|Get-Clipboard)\s*[|<]/i,
     severity: "caution",
     category: "data-exfiltration",
     description: "Exfiltrates content via the system clipboard.",
-    owasp: ["Sensitive Information Disclosure"],
-    nistAiRmf: ["Map"],
+    governance: [OWASP_SENSITIVE_DISCLOSURE, NIST_MAP],
   },
-
 ];

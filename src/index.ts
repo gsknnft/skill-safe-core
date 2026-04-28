@@ -54,7 +54,6 @@ export {
 export {
   getPolicyPreset,
   isPolicyPreset,
-  POLICY_PRESETS,
 } from "./policy.js";
 
 export { auditSuppressions } from "./suppressionAudit.js";
@@ -111,3 +110,5 @@ export type {
 } from "./types.js";
 
 export { parseSuppressions } from "./sanitize.js";
+
+export { HELP, PREFERRED_MARKDOWN_FILES, POLICY_PRESETS } from "./constants.js";

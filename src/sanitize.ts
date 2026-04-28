@@ -1,4 +1,5 @@
-import { getCategoryReportArrays } from "./mappings.js";
+import { ZERO_WIDTH_RE, HTML_ENTITIES, INVISIBLE_RUN_RE, INVISIBLE_RE } from "./constants.js";
+import { getCategoryReportArrays, toReportArrays } from "./mappings.js";
 import { RULES } from "./rules.js";
 import type {
   RuleDefinition,
@@ -16,22 +17,6 @@ import type {
 // Core scanner
 // ---------------------------------------------------------------------------
 
-const HTML_ENTITIES: Record<string, string> = {
-  amp: "&",
-  apos: "'",
-  colon: ":",
-  gt: ">",
-  lt: "<",
-  nbsp: " ",
-  quot: '"',
-  sol: "/",
-};
-
-const ZERO_WIDTH_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
-const INVISIBLE_RE =
-  /[\u200B-\u200D\u2060\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2800\u3164\uFFA0]/g;
-const INVISIBLE_RUN_RE =
-  /[\u200B-\u200D\u2060\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2800\u3164\uFFA0]{10,}/g;
 
 export const normalizeSkillText = (content: string): string => {
   let normalized = content
@@ -320,9 +305,7 @@ export const sanitizeSkillMarkdown = (
         : excerptMatch(content, match.index, match[0].length),
       normalized: matchedNormalized || undefined,
       location: getLocation(matchContent, match.index),
-      owasp: rule.owasp,
-      mitreAtlas: rule.mitreAtlas,
-      nistAiRmf: rule.nistAiRmf,
+      ...(rule.governance ? toReportArrays(rule.governance) : {}),
     });
   }
 
