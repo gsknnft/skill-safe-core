@@ -5,6 +5,89 @@ export type SkillTrustLevel =
   | "community" // external source (GitHub, registry, etc.)
   | "unknown"; // unrecognized — treat as untrusted
 
+export type SkillSafePolicyPreset = "strict" | "marketplace" | "workspace";
+
+
+export type SanitizationLocation = {
+  /** 1-based line number in the scanned content. */
+  line: number;
+  /** 1-based column number in the scanned content. */
+  column: number;
+  /** UTF-16 string offset used by JavaScript RegExp matches. */
+  offset: number;
+  /** UTF-8 byte offset for scanners/reporters that need byte coordinates. */
+  byteOffset: number;
+};
+
+export type SanitizationFlag = {
+  /** Stable rule identifier for built-in rules and synthetic source checks. */
+  ruleId?: SkillRuleId;
+  /** Stable short rule name for reports and future suppressions. */
+  ruleName?: string;
+  severity: SanitizationSeverity;
+  category: SanitizationCategory;
+  description: string;
+  /** Short excerpt of the matched text for display */
+  matched: string;
+  /** True when matched only after normalization/de-obfuscation. */
+  normalized?: boolean;
+  /** External framework mapping for governance/reporting. */
+  owasp?: string[];
+  mitreAtlas?: string[];
+  nistAiRmf?: string[];
+  /** Best-effort evidence location for content-backed findings. */
+  location?: SanitizationLocation;
+};
+
+export type SkillScanReport = {
+  version: "skill-safe.report.v1";
+  riskScore: number;
+  summary: {
+    safeToInstall: boolean;
+    severity: "safe" | "caution" | "danger";
+    danger: number;
+    caution: number;
+    hiddenContent: number;
+    normalizedMatches: number;
+  };
+  categories: Partial<Record<SanitizationCategory, number>>;
+  mappings: {
+    owasp: string[];
+    mitreAtlas: string[];
+    nistAiRmf: string[];
+  };
+  recommendedAction: "allow" | "review" | "block";
+};
+
+/**
+ * Controls how `<!-- skill-safe-ignore SS001: reason -->` comments are treated.
+ *
+ * - `"disabled"`     — suppression comments are not parsed at all.
+ * - `"report-only"`  — comments are parsed and surfaced on the result, but all
+ *                      flags are still reported. Safe default for untrusted content.
+ * - `"honor"`        — matching rule IDs are filtered from the flag list. Only
+ *                      use for workspace/verified sources where the author is trusted.
+ */
+export type SuppressionMode = "disabled" | "report-only" | "honor";
+
+export type SanitizationOptions = {
+  /** Additional rules appended to the built-in set. */
+  extraRules?: RuleDefinition[];
+  /**
+   * Controls suppression comment behavior.
+   * Defaults to `"report-only"` — suppressions are parsed and surfaced but
+   * never applied when scanning untrusted content.
+   */
+  suppressionMode?: SuppressionMode;
+};
+
+export type SkillSafePolicy = {
+  preset: SkillSafePolicyPreset;
+  failOn: "never" | "review" | "block";
+  suppressionMode: SuppressionMode;
+  npmPolicy: NpmSourcePolicy;
+};
+
 export type SkillSafeReportMode = "resolved-source" | "file" | "text" | "batch";
 
 export type SourceIntegrity = {
@@ -22,16 +105,6 @@ export type SourceIntegrity = {
   algorithm: "SHA-256";
 };
 
-export type SanitizationLocation = {
-  /** 1-based line number in the scanned content. */
-  line: number;
-  /** 1-based column number in the scanned content. */
-  column: number;
-  /** UTF-16 string offset used by JavaScript RegExp matches. */
-  offset: number;
-  /** UTF-8 byte offset for scanners/reporters that need byte coordinates. */
-  byteOffset: number;
-};
 
 export type GitHubSkillShorthand = {
   owner: string;
@@ -160,25 +233,6 @@ export type SkillResolverOptions = {
   npmPolicy?: NpmSourcePolicy;
 };
 
-export type SanitizationFlag = {
-  /** Stable rule identifier for built-in rules and synthetic source checks. */
-  ruleId?: SkillRuleId;
-  /** Stable short rule name for reports and future suppressions. */
-  ruleName?: string;
-  severity: SanitizationSeverity;
-  category: SanitizationCategory;
-  description: string;
-  /** Short excerpt of the matched text for display */
-  matched: string;
-  /** True when matched only after normalization/de-obfuscation. */
-  normalized?: boolean;
-  /** External framework mapping for governance/reporting. */
-  owasp?: string[];
-  mitreAtlas?: string[];
-  nistAiRmf?: string[];
-  /** Best-effort evidence location for content-backed findings. */
-  location?: SanitizationLocation;
-};
 
 export type SanitizationSuppression = {
   ruleId: string;
@@ -198,25 +252,6 @@ export type SanitizationResult = {
   report: SkillScanReport;
 };
 
-export type SkillScanReport = {
-  version: "skill-safe.report.v1";
-  riskScore: number;
-  summary: {
-    safeToInstall: boolean;
-    severity: "safe" | "caution" | "danger";
-    danger: number;
-    caution: number;
-    hiddenContent: number;
-    normalizedMatches: number;
-  };
-  categories: Partial<Record<SanitizationCategory, number>>;
-  mappings: {
-    owasp: string[];
-    mitreAtlas: string[];
-    nistAiRmf: string[];
-  };
-  recommendedAction: "allow" | "review" | "block";
-};
 
 
 export type SkillSafeDocumentReport = {
@@ -303,7 +338,7 @@ export type ScanSkillFilesOptions = {
    * Controls how `<!-- skill-safe-ignore SS001: reason -->` comments are
    * treated during scanning. Defaults to `"report-only"`.
    */
-  suppressionMode?: import("./sanitize.js").SuppressionMode;
+  suppressionMode?: SuppressionMode;
 };
 
 export type ScanSkillDirectoryOptions = ScanSkillFilesOptions & {

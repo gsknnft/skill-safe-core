@@ -1,14 +1,5 @@
-import type { NpmSourcePolicy } from "./types.js";
-import type { SuppressionMode } from "./sanitize.js";
+import type { SkillSafePolicyPreset, SkillSafePolicy } from "./types.js";
 
-export type SkillSafePolicyPreset = "strict" | "marketplace" | "workspace";
-
-export type SkillSafePolicy = {
-  preset: SkillSafePolicyPreset;
-  failOn: "never" | "review" | "block";
-  suppressionMode: SuppressionMode;
-  npmPolicy: NpmSourcePolicy;
-};
 
 export const POLICY_PRESETS: Record<SkillSafePolicyPreset, SkillSafePolicy> = {
   strict: {

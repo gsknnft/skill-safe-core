@@ -96,6 +96,10 @@ export type {
   ScanSkillDirectoryOptions,
   ScanSkillFilesOptions,
   ScannedSkillFile,
+  SuppressionMode,
+  SanitizationOptions,
+  SkillSafePolicy,
+  SkillSafePolicyPreset,
 } from "./types.js";
 
 export type {
@@ -105,7 +109,6 @@ export type {
 } from "./resolveMarkdownFile.js";
 
 export type { GovernanceFramework, MappingConfidence, GovernanceMapping } from "./mappings.js";
-export type { SkillSafePolicy, SkillSafePolicyPreset } from "./policy.js";
 export type {
   SuppressionAuditFinding,
   SuppressionAuditReport,
@@ -113,4 +116,3 @@ export type {
 
 export type { SanitizationSuppression } from "./types.js";
 export { parseSuppressions } from "./sanitize.js";
-export type { SuppressionMode, SanitizationOptions } from "./sanitize.js";

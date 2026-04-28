@@ -2,7 +2,6 @@ import
   {
     appendSanitizationFlags,
     sanitizeSkillMarkdown,
-    type SanitizationFlag,
   } from "./sanitize.js";
 import
   {
@@ -11,6 +10,7 @@ import
   } from "./trust.js";
 
 import type {
+  SanitizationFlag,
   GitHubSkillShorthand,
   NpmSourcePolicy,
   ResolvedSkillMarkdown,

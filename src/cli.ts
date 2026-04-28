@@ -2,8 +2,11 @@
 import { stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { SkillSafePolicyPreset } from "./policy.js";
-import { getPolicyPreset, isPolicyPreset } from "./policy.js";
+import type {  } from "./policy.js";
+import {
+  getPolicyPreset,
+  isPolicyPreset,
+} from "./policy.js";
 import {
   createSkillSafeDocumentReport,
   createSkillSafeReport,
@@ -14,7 +17,6 @@ import { describeSkillSource, resolveSkillMarkdown } from "./resolver.js";
 import {
   appendSanitizationFlags,
   sanitizeSkillMarkdown,
-  type SuppressionMode,
 } from "./sanitize.js";
 import { stringifySkillSafeSarifJson } from "./sarif.js";
 import { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
@@ -23,7 +25,12 @@ import {
   type SuppressionAuditReport,
 } from "./suppressionAudit.js";
 import { requiresSanitization } from "./trust.js";
-import type { NpmSourcePolicy, SkillSafeFullReport } from "./types.js";
+import type {
+  NpmSourcePolicy,
+  SkillSafeFullReport,
+  SuppressionMode,
+  SkillSafePolicyPreset,
+} from "./types.js";
 
 type Args = {
   source: string | null;

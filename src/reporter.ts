@@ -2,7 +2,7 @@ import type {
   SanitizationFlag,
   SanitizationResult,
   SkillScanReport,
-} from "./sanitize.js";
+} from "./types.js";
 import type {
   CreateSkillSafeReportOptions,
   SkillSafeDocumentReport,
