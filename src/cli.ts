@@ -66,7 +66,7 @@ const DEFAULT_SOURCE = "github:HashLips/agent-skills";
  *   - anything else             → unknown
  */
 
-const HELP = `skill-safe
+export const HELP = `skill-safe
 
 Static pre-install scanner for agent skill markdown.
 

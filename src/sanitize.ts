@@ -1,14 +1,15 @@
-import { RULES } from "./rules.js";
 import { getCategoryReportArrays } from "./mappings.js";
+import { RULES } from "./rules.js";
 import type {
+  RuleDefinition,
   SanitizationCategory,
+  SanitizationFlag,
+  SanitizationLocation,
+  SanitizationOptions,
   SanitizationResult,
   SanitizationSuppression,
-  RuleDefinition,
   SkillScanReport,
-  SanitizationLocation,
-  SanitizationFlag,
-  SanitizationOptions,
+  SuppressionMode,
 } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -27,8 +28,10 @@ const HTML_ENTITIES: Record<string, string> = {
 };
 
 const ZERO_WIDTH_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
-const INVISIBLE_RE = /[\u200B-\u200D\u2060\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2800\u3164\uFFA0]/g;
-const INVISIBLE_RUN_RE = /[\u200B-\u200D\u2060\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2800\u3164\uFFA0]{10,}/g;
+const INVISIBLE_RE =
+  /[\u200B-\u200D\u2060\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2800\u3164\uFFA0]/g;
+const INVISIBLE_RUN_RE =
+  /[\u200B-\u200D\u2060\uFEFF\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180E\u2800\u3164\uFFA0]{10,}/g;
 
 export const normalizeSkillText = (content: string): string => {
   let normalized = content
@@ -61,7 +64,10 @@ export const normalizeSkillText = (content: string): string => {
         return _match;
       }
     })
-    .replace(/&([a-zA-Z]+);?/g, (match, name: string) => HTML_ENTITIES[name.toLowerCase()] ?? match);
+    .replace(
+      /&([a-zA-Z]+);?/g,
+      (match, name: string) => HTML_ENTITIES[name.toLowerCase()] ?? match,
+    );
 
   // De-obfuscate common spaced command/protocol words without collapsing normal prose.
   const spacedTokens = [
@@ -82,11 +88,15 @@ export const normalizeSkillText = (content: string): string => {
   return normalized;
 };
 
-const excerptMatch = (content: string, index: number, matchLength: number): string => {
+const excerptMatch = (
+  content: string,
+  index: number,
+  matchLength: number,
+): string => {
   const CONTEXT = 40;
   const start = Math.max(0, index - 20);
-  const end   = Math.min(content.length, index + matchLength + CONTEXT);
-  const raw   = content.slice(start, end).replace(/\s+/g, " ").trim();
+  const end = Math.min(content.length, index + matchLength + CONTEXT);
+  const raw = content.slice(start, end).replace(/\s+/g, " ").trim();
   return end < content.length ? `${raw}...` : raw;
 };
 
@@ -112,7 +122,9 @@ const getLocation = (content: string, offset: number): SanitizationLocation => {
 };
 
 const uniqueSorted = (values: Array<string | undefined>): string[] =>
-  [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
+  [
+    ...new Set(values.filter((value): value is string => Boolean(value))),
+  ].sort();
 
 const withDefaultMappings = (flag: SanitizationFlag): SanitizationFlag => {
   const defaults = getCategoryReportArrays(flag.category);
@@ -131,7 +143,9 @@ const buildReport = (
 ): SkillScanReport => {
   const danger = flags.filter((flag) => flag.severity === "danger").length;
   const caution = flags.filter((flag) => flag.severity === "caution").length;
-  const hiddenContent = flags.filter((flag) => flag.category === "hidden-content").length;
+  const hiddenContent = flags.filter(
+    (flag) => flag.category === "hidden-content",
+  ).length;
   const normalizedMatches = flags.filter((flag) => flag.normalized).length;
   const categories: Partial<Record<SanitizationCategory, number>> = {};
   for (const flag of flags) {
@@ -160,7 +174,12 @@ const buildReport = (
       mitreAtlas: uniqueSorted(flags.flatMap((flag) => flag.mitreAtlas ?? [])),
       nistAiRmf: uniqueSorted(flags.flatMap((flag) => flag.nistAiRmf ?? [])),
     },
-    recommendedAction: severity === "danger" ? "block" : severity === "caution" ? "review" : "allow",
+    recommendedAction:
+      severity === "danger"
+        ? "block"
+        : severity === "caution"
+          ? "review"
+          : "allow",
   };
 };
 
@@ -172,14 +191,20 @@ const buildReport = (
  * Parse `<!-- skill-safe-ignore SS001: reason text -->` comments from content.
  * Reason text is required — bare `<!-- skill-safe-ignore SS001 -->` is rejected.
  */
-export const parseSuppressions = (content: string): SanitizationSuppression[] => {
+export const parseSuppressions = (
+  content: string,
+): SanitizationSuppression[] => {
   const suppressions: SanitizationSuppression[] = [];
   const lines = content.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const lineRe = /<!--\s*skill-safe-ignore\s+(SS\w+)\s*:\s*(.+?)\s*-->/gi;
     let match: RegExpExecArray | null;
     while ((match = lineRe.exec(lines[i]!)) !== null) {
-      suppressions.push({ ruleId: match[1]!, reason: match[2]!.trim(), line: i + 1 });
+      suppressions.push({
+        ruleId: match[1]!,
+        reason: match[2]!.trim(),
+        line: i + 1,
+      });
     }
   }
   return suppressions;
@@ -188,7 +213,6 @@ export const parseSuppressions = (content: string): SanitizationSuppression[] =>
 // ---------------------------------------------------------------------------
 // Scanner
 // ---------------------------------------------------------------------------
-
 
 /**
  * Scan skill markdown content for red flags.
@@ -199,16 +223,30 @@ export const parseSuppressions = (content: string): SanitizationSuppression[] =>
  * @param extraRulesOrOptions - Additional rules (legacy positional) or options object
  *
  */
+/**
+ * Scan skill markdown content for red flags.
+ * Parses suppressions and reports them, but DOES NOT apply them unless suppressionMode is 'honor'.
+ * By default, suppressionMode is 'report-only' (safe for untrusted content).
+ *
+ * @param content - Raw markdown string (YAML frontmatter + body)
+ * @param extraRulesOrOptions - Additional rules (legacy positional) or options object
+ * @param honorSuppressions - (DEPRECATED) Use options.suppressionMode instead. If set, overrides suppressionMode for backward compatibility.
+ */
 export const sanitizeSkillMarkdown = (
   content: string,
   extraRulesOrOptions: RuleDefinition[] | SanitizationOptions = [],
-  honorSuppressions: boolean = true,
+  honorSuppressions?: boolean, // deprecated, use options.suppressionMode
 ): SanitizationResult => {
   const options: SanitizationOptions = Array.isArray(extraRulesOrOptions)
     ? { extraRules: extraRulesOrOptions }
     : extraRulesOrOptions;
   const extraRules = options.extraRules ?? [];
-  const suppressionMode = options.suppressionMode ?? (honorSuppressions ? "honor" : "report-only");
+  let suppressionMode: SuppressionMode = "report-only";
+  if (typeof options.suppressionMode === "string") {
+    suppressionMode = options.suppressionMode;
+  } else if (typeof honorSuppressions === "boolean") {
+    suppressionMode = honorSuppressions ? "honor" : "report-only";
+  }
 
   const suppressions =
     suppressionMode !== "disabled" ? parseSuppressions(content) : [];
@@ -315,8 +353,9 @@ export const sanitizeSkillMarkdown = (
     });
   }
 
+  // Only filter out suppressed flags in 'honor' mode. In 'report-only', all flags are present.
   const activeFlags =
-    suppressedIds.size > 0
+    suppressionMode === "honor" && suppressedIds.size > 0
       ? flags.filter((f) => !f.ruleId || !suppressedIds.has(f.ruleId))
       : flags;
 
@@ -368,15 +407,20 @@ export const appendSanitizationFlags = (
  * Extract YAML frontmatter from a skill markdown file.
  * Returns null if no frontmatter block is present.
  */
-export const extractSkillFrontmatter = (content: string): Record<string, string> | null => {
+export const extractSkillFrontmatter = (
+  content: string,
+): Record<string, string> | null => {
   const match = /^---\r?\n([\s\S]*?)\r?\n---/m.exec(content.trimStart());
   if (!match) return null;
   const result: Record<string, string> = {};
   for (const line of match[1]!.split(/\r?\n/)) {
     const colonIndex = line.indexOf(":");
     if (colonIndex === -1) continue;
-    const key   = line.slice(0, colonIndex).trim();
-    const value = line.slice(colonIndex + 1).trim().replace(/^['"]|['"]$/g, "");
+    const key = line.slice(0, colonIndex).trim();
+    const value = line
+      .slice(colonIndex + 1)
+      .trim()
+      .replace(/^['"]|['"]$/g, "");
     if (key) result[key] = value;
   }
   return result;
