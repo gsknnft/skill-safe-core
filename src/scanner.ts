@@ -20,8 +20,15 @@ import {
   createSkillSafeReport,
 } from "./reporter.js";
 import { requiresSanitization, resolveSkillTrustLevel } from "./trust.js";
-import type { RuleDefinition, ScannedSkillFile, ScanSkillBatchResult, ScanSkillDirectoryOptions, ScanSkillFilesOptions } from "./types.js";
-import { sanitizeSkillMarkdown, type SuppressionMode } from "./sanitize.js";
+import type {
+  RuleDefinition,
+  ScannedSkillFile,
+  ScanSkillBatchResult,
+  ScanSkillDirectoryOptions,
+  ScanSkillFilesOptions,
+  SuppressionMode,
+} from "./types.js";
+import { sanitizeSkillMarkdown } from "./sanitize.js";
 
 
 const DEFAULT_IGNORE_DIRS = new Set([

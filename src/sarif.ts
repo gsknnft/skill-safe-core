@@ -5,7 +5,7 @@
  * GitHub schema: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-github-code-scanning
  */
 
-import type { RuleDefinition, SanitizationCategory, SanitizationFlag } from "./sanitize.js";
+import type { RuleDefinition } from "./sanitize.js";
 import { RULES } from "./rules.js";
 import type {
   SarifResult,
@@ -15,7 +15,9 @@ import type {
   SkillSafeFullReport,
   SarifLog,
   SarifArtifact,
+  SanitizationFlag,
   SarifRuleMeta,
+  SanitizationCategory,
 } from "./types.js";
 
 
