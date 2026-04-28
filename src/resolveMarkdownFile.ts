@@ -1,5 +1,4 @@
-import { ResolveMarkdownFileOptions, ResolvedMarkdownFile } from "src";
-import { GitHubContentResponse, GitHubContentFile, GitHubContentDirectory } from "./types";
+import type { GitHubContentResponse, GitHubContentFile, GitHubContentDirectory, ResolvedMarkdownFile, ResolveMarkdownFileOptions } from "./types.js";
 
 const PREFERRED_MARKDOWN_FILES = ["SKILL.md", "skill.md", "README.md", "readme.md", "index.md"];
 
