@@ -16,8 +16,8 @@ import { PREFERRED_MARKDOWN_FILES } from "./constants.js";
  *
  * Returns the resolved download URL of the markdown file, or throws an error
  * if no suitable file is found or if any fetch operation fails.
- * Note: GitHub API rate limits apply. Providing a GITHUB_TOKEN with appropriate
- * scopes can increase limits and access private repositories.
+ * Note: GitHub API rate limits apply. Providing an explicit token with
+ * appropriate scopes can increase limits and access private repositories.
  *
  * @param options - Configuration for resolving the markdown file, including
  *   repository details, API URL, authentication token, and scanning preferences.
@@ -66,11 +66,6 @@ import { PREFERRED_MARKDOWN_FILES } from "./constants.js";
  * 
  */
 
-const getProcessEnv = (key: string): string | undefined => {
-  if (typeof process === "undefined") return undefined;
-  return process.env?.[key];
-};
-
 const assertFetchOk = async (response: Response, url: string): Promise<void> => {
   if (response.ok) return;
   throw new Error(`resolveMarkdownFile: ${url} returned HTTP ${response.status}`);
@@ -84,6 +79,15 @@ const jsonFetch = async (
   const response = await fetcher(url, { headers });
   await assertFetchOk(response, url);
   return await response.json() as GitHubContentResponse;
+};
+
+const requireFetcher = (
+  fetcher: typeof fetch | undefined,
+): typeof fetch => {
+  if (fetcher) return fetcher;
+  throw new Error(
+    "resolveMarkdownFile: network resolution requires an explicit fetcher",
+  );
 };
 
 const buildGithubContentsUrl = (
@@ -135,7 +139,7 @@ export const resolveMarkdownFile = async (
   options: ResolveMarkdownFileOptions,
 ): Promise<ResolvedMarkdownFile> => {
   const source = options.source ?? "github";
-  const fetcher = options.fetcher ?? fetch;
+  const fetcher = requireFetcher(options.fetcher);
   const preferredFileNames = options.preferredFileNames ?? PREFERRED_MARKDOWN_FILES;
   const scanSubdirectories = options.scanSubdirectories ?? true;
 
@@ -155,7 +159,7 @@ export const resolveMarkdownFile = async (
     path,
   );
 
-  const token = options.token ?? (source === "github" ? getProcessEnv("GITHUB_TOKEN") : undefined);
+  const token = options.token;
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "User-Agent": "skill-safe",

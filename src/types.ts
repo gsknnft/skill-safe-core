@@ -293,6 +293,7 @@ export type NpmSourcePolicy = {
 
 export type SkillResolverOptions = {
   bundled?: boolean;
+  /** Required for built-in network resolvers. Custom resolvers may ignore it. */
   fetcher?: typeof fetch;
   resolvers?: Partial<Record<SkillSourceKind, SkillSourceResolver>>;
   /** Policy applied when resolving npm: sources. */
@@ -638,7 +639,7 @@ export type ResolveMarkdownFileOptions = {
   apiUrl?: string;
   /** Injected fetch implementation for tests, workers, or custom runtimes. */
   fetcher?: typeof fetch;
-  /** Optional auth token. Defaults to GITHUB_TOKEN for GitHub sources in Node. */
+  /** Optional auth token for private or higher-rate GitHub API requests. */
   token?: string;
   /** Preferred markdown entrypoints, in order. */
   preferredFileNames?: string[];

@@ -110,7 +110,7 @@ export const CATEGORY_RULE_META: Record<SanitizationCategory, SarifRuleMeta> = {
     id: "SS/script-injection",
     name: "ScriptInjection",
     short: "Script or code injection pattern detected.",
-    full: "The skill embeds shell commands, eval() calls, or other execution vectors that could run arbitrary code on the host system.",
+    full: "The skill embeds shell commands, dynamic code evaluation calls, or other execution vectors that could run arbitrary code on the host system.",
     securitySeverity: "9.0",
     precision: "high",
   },

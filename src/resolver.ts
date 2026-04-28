@@ -234,6 +234,16 @@ const fetchText = async (
   return response.text();
 };
 
+const requireFetcher = (
+  fetcher: typeof fetch | undefined,
+  source: string,
+): typeof fetch => {
+  if (fetcher) return fetcher;
+  throw new Error(
+    `Source ${source} requires an explicit fetcher. Pass { fetcher: globalThis.fetch } in network-enabled hosts.`,
+  );
+};
+
 const githubCandidateUrls = (parsed: GitHubSkillShorthand): string[] => {
   const candidates = parsed.path ? [parsed.path] : DEFAULT_MARKDOWN_CANDIDATES;
   return candidates.map(
@@ -416,9 +426,9 @@ export async function resolveSkillMarkdown(
 ): Promise<ResolvedSkillMarkdown> {
   const descriptor = describeSkillSource(source, options);
   const customResolver = options.resolvers?.[descriptor.kind];
-  const fetcher = options.fetcher ?? fetch;
+  const fetcher = options.fetcher;
   const sourceFlags =
-    descriptor.kind === "npm"
+    descriptor.kind === "npm" && fetcher
       ? buildNpmSourceFlags(
           descriptor.value,
           await fetchNpmRegistryMeta(descriptor.value, fetcher),
@@ -446,7 +456,7 @@ export async function resolveSkillMarkdown(
 
   const { resolvedUrl, markdown } = await resolveDirectMarkdown(
     descriptor,
-    fetcher,
+    requireFetcher(fetcher, source),
   );
 
   return {

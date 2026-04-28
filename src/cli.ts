@@ -294,6 +294,7 @@ const scanSource = async (
   const descriptor = describeSkillSource(source);
   const resolved = await resolveSkillMarkdown(source, {
     npmPolicy: args.npmPolicy,
+    fetcher: globalThis.fetch,
   });
   const scan = requiresSanitization(resolved.trust)
     ? appendSanitizationFlags(

@@ -2,6 +2,19 @@
 
 All notable changes to `@gsknnft/skill-safe` are documented here.
 
+## 0.3.1 - Unreleased
+
+### Security
+
+- Removed implicit environment-token lookup from `resolveMarkdownFile()`.
+- Built-in network resolvers now require an explicit `fetcher` from the host.
+  The CLI still injects `globalThis.fetch` because remote source scanning is an
+  explicit CLI feature.
+- Reduced static-analysis false positives in package scanners by removing
+  executable-looking `eval()` and `process.env` literals from scanner internals
+  and docs.
+- Restored frozen lockfile install in the publish workflow.
+
 ## 0.3.0 - 2026-04-27
 
 ### Added

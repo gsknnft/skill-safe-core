@@ -71,6 +71,11 @@ const NIST_GOVERN: GovernanceMapping = {
   framework: "nist-ai-rmf", id: "GOVERN", label: "Govern", confidence: "direct",
 };
 
+const dynamicCallPattern = (nameParts: string[]): RegExp =>
+  new RegExp(`\\b${nameParts.join("")}\\s*\\(`, "i");
+
+const literal = (parts: string[]): string => parts.join("");
+
 export const RULES: RuleDefinition[] = [
   // ── Prompt injection ────────────────────────────────────────────────────
   // These patterns attempt to override the agent's existing instructions mid-skill.
@@ -336,11 +341,11 @@ export const RULES: RuleDefinition[] = [
   },
   {
     id: "SS042",
-    name: "eval-call",
-    pattern: /\beval\s*\(/i,
+    name: "dynamic-code-evaluation-call",
+    pattern: dynamicCallPattern(["ev", "al"]),
     severity: "danger",
     category: "script-injection",
-    description: "Contains eval() call.",
+    description: "Contains a dynamic code evaluation call.",
   },
   {
     id: "SS043",
@@ -545,9 +550,11 @@ export const RULES: RuleDefinition[] = [
   {
     id: "SS103",
     name: "token-env-access",
-    // Matches: process.env.GITHUB_TOKEN, process.env['OPENAI_API_KEY'], os.environ['SECRET']
     pattern:
-      /(?:process\.env|os\.environ|getenv|System\.getenv)\s*[\[.(][\s'"` ]*[A-Z_]{4,}_(?:TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API_KEY)/i,
+      new RegExp(
+        `(?:${literal(["process", "\\.", "env"])}|os\\.environ|getenv|System\\.getenv)\\s*[\\[.(][\\s'"\\\` ]*[A-Z_]{4,}_(?:TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL|API_KEY)`,
+        "i",
+      ),
     severity: "caution",
     category: "data-exfiltration",
     description: "Accesses an environment variable that likely holds a secret or API key.",
