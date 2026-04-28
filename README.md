@@ -48,6 +48,18 @@ Use `skill-safe` as the first gate. Pair it with runtime sandboxing, tool
 allowlists, human approval, and optional semantic review for a complete defense
 layer.
 
+## Quick Demo
+
+```sh
+git clone https://github.com/gsknnft/skill-safe-core
+cd skill-safe-core
+pnpm install
+pnpm demo
+```
+
+This scans the three suite example skills (clean, malicious, suppressed) and
+prints findings, governance mappings, and a suppression audit — in under 2 seconds.
+
 ## Install
 
 ```sh

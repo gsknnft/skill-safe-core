@@ -117,6 +117,48 @@ bump the version field.
 
 ---
 
+## Version Compatibility
+
+| Package | Current | Compatible with |
+|---|---:|---|
+| `@gsknnft/skill-safe` | 0.3.x | report v1, suppression-audit v1 |
+| `@gsknnft/skill-ledger` | 0.1.x | skill-safe ^0.3.0, manifest v1 |
+| `@gsknnft/skill-ui` | 0.1.x | skill-safe report v1, ledger manifest v1 |
+| `@gsknnft/skill-safe-judge` | planned | skill-safe ^0.3.0 |
+| `@gsknnft/skill-safe-runtime` | planned | skill-safe ^0.3.0 |
+
+After `v1.0`, each package follows semver independently. Report schema changes
+are additive-only within a version field. Breaking changes bump the version string.
+
+## One-Command Demo
+
+Each package ships a `pnpm demo` script:
+
+```sh
+# skill-safe: scan the suite examples, show findings + suppression audit
+cd packages/skill-safe && pnpm demo
+
+# skill-ledger: list manifest + run doctor
+cd packages/skill-ledger && pnpm demo
+
+# skill-ui: open the review workbench in the browser
+cd packages/skill-ui && pnpm demo
+```
+
+Canonical fixture data lives in `packages/skill-safe/examples/suite/`:
+
+```
+examples/suite/
+  skills/
+    clean/SKILL.md       — zero findings (issue summarizer)
+    malicious/SKILL.md   — 4 danger findings (shadow maintainer)
+    suppressed/SKILL.md  — 1 unused suppression (deploy helper)
+  reports/
+    skill-safe.full-report.json
+    skill-ledger.manifest.json
+    suppression-audit.json
+```
+
 ## Demo Flow
 
 See [examples/DEMO_FLOW.md](../examples/DEMO_FLOW.md) for a hands-on walkthrough:

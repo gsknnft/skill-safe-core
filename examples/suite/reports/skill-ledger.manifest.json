@@ -1,0 +1,87 @@
+{
+  "version": "skill-ledger.manifest.v1",
+  "generatedAt": "2026-04-28T00:00:00.000Z",
+  "sourceId": "skill-suite-demo",
+  "skills": [
+    {
+      "id": "clean/SKILL.md",
+      "name": "Issue Summarizer",
+      "source": "examples/suite/skills/clean",
+      "resolvedUrl": null,
+      "scope": "workspace",
+      "installedAt": "2026-04-28T00:00:00.000Z",
+      "integrity": "sha256-0000000000000000000000000000000000000000000000000000000000000000",
+      "scanner": {
+        "name": "@gsknnft/skill-safe",
+        "version": "0.3.0",
+        "reportVersion": "skill-safe.report.v1"
+      },
+      "scan": {
+        "safeToInstall": true,
+        "recommendedAction": "allow",
+        "severity": "safe",
+        "riskScore": 0,
+        "flagCount": 0,
+        "categories": {},
+        "mappings": { "owasp": [], "mitreAtlas": [], "nistAiRmf": [] }
+      }
+    },
+    {
+      "id": "suppressed/SKILL.md",
+      "name": "Deploy Helper",
+      "source": "examples/suite/skills/suppressed",
+      "resolvedUrl": null,
+      "scope": "workspace",
+      "installedAt": "2026-04-28T00:00:00.000Z",
+      "integrity": "sha256-0000000000000000000000000000000000000000000000000000000000000001",
+      "scanner": {
+        "name": "@gsknnft/skill-safe",
+        "version": "0.3.0",
+        "reportVersion": "skill-safe.report.v1"
+      },
+      "scan": {
+        "safeToInstall": true,
+        "recommendedAction": "allow",
+        "severity": "safe",
+        "riskScore": 0,
+        "flagCount": 0,
+        "categories": {},
+        "mappings": { "owasp": [], "mitreAtlas": [], "nistAiRmf": [] }
+      }
+    },
+    {
+      "id": "malicious/SKILL.md",
+      "name": "Shadow Maintainer",
+      "source": "examples/suite/skills/malicious",
+      "resolvedUrl": null,
+      "scope": "workspace",
+      "installedAt": "2026-04-28T00:00:00.000Z",
+      "integrity": "sha256-0000000000000000000000000000000000000000000000000000000000000002",
+      "scanner": {
+        "name": "@gsknnft/skill-safe",
+        "version": "0.3.0",
+        "reportVersion": "skill-safe.report.v1"
+      },
+      "scan": {
+        "safeToInstall": false,
+        "recommendedAction": "block",
+        "severity": "danger",
+        "riskScore": 100,
+        "flagCount": 4,
+        "categories": {
+          "prompt-injection": 2,
+          "data-exfiltration": 2
+        },
+        "mappings": {
+          "owasp": [
+            "AST01 Malicious Skills / Plugins",
+            "AST03 Over-Privileged Skills",
+            "Data and Resource Exfiltration"
+          ],
+          "mitreAtlas": ["Exfiltration"],
+          "nistAiRmf": ["Manage", "Measure"]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "skill-safe.suppression-audit.v1",
+  "ok": false,
+  "invalid": 0,
+  "unused": 1,
+  "findings": [
+    {
+      "documentId": "suppressed/SKILL.md",
+      "ruleId": "SS071",
+      "line": 24,
+      "reason": "Health check calls are pre-approved read-only operations. Write approvals remain gated by human review per platform policy.",
+      "issue": "unused-suppression"
+    }
+  ]
+}
