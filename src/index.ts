@@ -61,9 +61,8 @@ export { auditSuppressions } from "./suppressionAudit.js";
 
 export { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 
-export type { ToSarifOptions } from "./sarif.js";
-
 export type {
+  ToSarifOptions,
   SanitizationCategory,
   SanitizationSeverity,
   RuleDefinition,
@@ -100,19 +99,15 @@ export type {
   SanitizationOptions,
   SkillSafePolicy,
   SkillSafePolicyPreset,
-} from "./types.js";
-
-export type {
+  SuppressionAuditFinding,
+  SuppressionAuditReport,
+  GovernanceFramework,
+  MappingConfidence,
+  GovernanceMapping,
+  SanitizationSuppression,
   MarkdownFileSource,
   ResolvedMarkdownFile,
   ResolveMarkdownFileOptions,
-} from "./resolveMarkdownFile.js";
+} from "./types.js";
 
-export type { GovernanceFramework, MappingConfidence, GovernanceMapping } from "./mappings.js";
-export type {
-  SuppressionAuditFinding,
-  SuppressionAuditReport,
-} from "./suppressionAudit.js";
-
-export type { SanitizationSuppression } from "./types.js";
 export { parseSuppressions } from "./sanitize.js";

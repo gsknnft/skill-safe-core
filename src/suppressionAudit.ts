@@ -1,21 +1,7 @@
 import { RULES } from "./rules.js";
-import type { SkillRuleId, SkillSafeFullReport } from "./types.js";
+import type { SkillRuleId, SkillSafeFullReport, SuppressionAuditFinding, SuppressionAuditReport } from "./types.js";
 
-export type SuppressionAuditFinding = {
-  documentId: string;
-  ruleId: string;
-  line: number;
-  reason: string;
-  issue: "invalid-rule" | "unused-suppression";
-};
 
-export type SuppressionAuditReport = {
-  version: "skill-safe.suppression-audit.v1";
-  ok: boolean;
-  invalid: number;
-  unused: number;
-  findings: SuppressionAuditFinding[];
-};
 
 const BUILT_IN_RULE_IDS = new Set(
   RULES.map((rule) => rule.id).filter((id): id is SkillRuleId => Boolean(id)),

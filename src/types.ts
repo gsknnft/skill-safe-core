@@ -252,7 +252,21 @@ export type SanitizationResult = {
   report: SkillScanReport;
 };
 
+export type SuppressionAuditFinding = {
+  documentId: string;
+  ruleId: string;
+  line: number;
+  reason: string;
+  issue: "invalid-rule" | "unused-suppression";
+};
 
+export type SuppressionAuditReport = {
+  version: "skill-safe.suppression-audit.v1";
+  ok: boolean;
+  invalid: number;
+  unused: number;
+  findings: SuppressionAuditFinding[];
+};
 
 export type SkillSafeDocumentReport = {
   id: string;
@@ -379,6 +393,11 @@ export type ScanSkillBatchResult = {
 // SARIF types (minimal subset for GitHub Code Scanning)
 // ---------------------------------------------------------------------------
 
+export type ToSarifOptions = {
+  /** Tool version to embed. Defaults to the current package version. */
+  version?: string;
+};
+
 export type SarifLog = {
   $schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json";
   version: "2.1.0";
@@ -473,3 +492,66 @@ export type SarifRuleMeta = {
   precision: SarifRule["properties"]["precision"];
   category?: SanitizationCategory;
 };
+
+
+
+
+export type MarkdownFileSource =
+  | "github"
+  | "registry"
+  | "souls"
+  | "hermes"
+  | "marketplace"
+  | "gitlab"
+  | "huggingface"
+  | "url"
+  | "unknown";
+
+export type ResolveMarkdownFileOptions = {
+  owner?: string;
+  repo?: string;
+  branch?: string;
+  path?: string;
+  source?: MarkdownFileSource;
+  /**
+   * Optional API endpoint for source hosts with GitHub-compatible contents
+   * responses. If provided, it is used directly.
+   */
+  apiUrl?: string;
+  /** Injected fetch implementation for tests, workers, or custom runtimes. */
+  fetcher?: typeof fetch;
+  /** Optional auth token. Defaults to GITHUB_TOKEN for GitHub sources in Node. */
+  token?: string;
+  /** Preferred markdown entrypoints, in order. */
+  preferredFileNames?: string[];
+  /** Whether to inspect one level of subdirectories for SKILL.md. Defaults true. */
+  scanSubdirectories?: boolean;
+};
+
+export type ResolvedMarkdownFile = {
+  resolvedUrl: string;
+  source: MarkdownFileSource;
+  owner?: string;
+  repo?: string;
+  branch?: string;
+  path?: string;
+};
+
+export type GitHubContentFile = {
+  type: "file";
+  name: string;
+  path: string;
+  download_url?: string | null;
+};
+
+export type GitHubContentDirectory = {
+  type: "dir";
+  name: string;
+  path: string;
+  url?: string;
+};
+
+export type GitHubContentResponse =
+  | GitHubContentFile
+  | GitHubContentDirectory
+  | Array<GitHubContentFile | GitHubContentDirectory>;

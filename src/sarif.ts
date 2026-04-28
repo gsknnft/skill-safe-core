@@ -5,9 +5,9 @@
  * GitHub schema: https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/sarif-support-for-github-code-scanning
  */
 
-import type { RuleDefinition } from "./sanitize.js";
 import { RULES } from "./rules.js";
 import type {
+  RuleDefinition,
   SarifResult,
   SkillSafeDocumentReport,
   SarifRule,
@@ -18,6 +18,7 @@ import type {
   SanitizationFlag,
   SarifRuleMeta,
   SanitizationCategory,
+  ToSarifOptions,
 } from "./types.js";
 
 
@@ -287,10 +288,6 @@ const buildResultsForDocument = (
   });
 };
 
-export type ToSarifOptions = {
-  /** Tool version to embed. Defaults to the current package version. */
-  version?: string;
-};
 
 /**
  * Convert a SkillSafeFullReport into a SARIF v2.1.0 log suitable for

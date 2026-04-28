@@ -3,7 +3,6 @@ import { getCategoryReportArrays } from "./mappings.js";
 import type {
   SanitizationCategory,
   SanitizationResult,
-  SanitizationSeverity,
   SanitizationSuppression,
   RuleDefinition,
   SkillScanReport,
@@ -11,9 +10,6 @@ import type {
   SanitizationFlag,
   SanitizationOptions,
 } from "./types.js";
-
-export type { SanitizationCategory, SanitizationSeverity, RuleDefinition };
-
 
 // ---------------------------------------------------------------------------
 // Core scanner
@@ -196,26 +192,30 @@ export const parseSuppressions = (content: string): SanitizationSuppression[] =>
 
 /**
  * Scan skill markdown content for red flags.
+ * Parses suppressions and reports them, but DOES NOT apply them -
+ * Caller is responsible for filtering flags based on suppressions and suppressionMode
  *
  * @param content - Raw markdown string (YAML frontmatter + body)
  * @param extraRulesOrOptions - Additional rules (legacy positional) or options object
+ *
  */
 export const sanitizeSkillMarkdown = (
   content: string,
   extraRulesOrOptions: RuleDefinition[] | SanitizationOptions = [],
+  honorSuppressions: boolean = true,
 ): SanitizationResult => {
   const options: SanitizationOptions = Array.isArray(extraRulesOrOptions)
     ? { extraRules: extraRulesOrOptions }
     : extraRulesOrOptions;
   const extraRules = options.extraRules ?? [];
-  const suppressionMode = options.suppressionMode ?? "report-only";
+  const suppressionMode = options.suppressionMode ?? (honorSuppressions ? "honor" : "report-only");
 
-  const suppressions = suppressionMode !== "disabled"
-    ? parseSuppressions(content)
-    : [];
-  const suppressedIds = suppressionMode === "honor"
-    ? new Set(suppressions.map((s) => s.ruleId))
-    : new Set<string>();
+  const suppressions =
+    suppressionMode !== "disabled" ? parseSuppressions(content) : [];
+  const suppressedIds =
+    suppressionMode === "honor"
+      ? new Set(suppressions.map((s) => s.ruleId))
+      : new Set<string>();
 
   const flags: SanitizationFlag[] = [];
   const seenPatterns = new Set<string>();
@@ -245,7 +245,8 @@ export const sanitizeSkillMarkdown = (
       ruleName: "invisible-unicode-character",
       severity: "caution",
       category: "hidden-content",
-      description: "Contains invisible Unicode characters that may hide instructions from reviewers.",
+      description:
+        "Contains invisible Unicode characters that may hide instructions from reviewers.",
       matched: `${invisibleCount} invisible character${invisibleCount === 1 ? "" : "s"}`,
       location: getLocation(content, firstInvisibleIndex),
       owasp: ["Agentic Instruction and Tool Manipulation"],
@@ -271,19 +272,19 @@ export const sanitizeSkillMarkdown = (
     seenPatterns.add(key);
     const matchContent = matchedNormalized ? normalizedContent : content;
     flags.push({
-      ruleId:      rule.id,
-      ruleName:    rule.name,
-      severity:    rule.severity,
-      category:    rule.category,
+      ruleId: rule.id,
+      ruleName: rule.name,
+      severity: rule.severity,
+      category: rule.category,
       description: rule.description,
-      matched:     matchedNormalized
+      matched: matchedNormalized
         ? excerptMatch(normalizedContent, match.index, match[0].length)
         : excerptMatch(content, match.index, match[0].length),
-      normalized:  matchedNormalized || undefined,
-      location:    getLocation(matchContent, match.index),
-      owasp:       rule.owasp,
-      mitreAtlas:  rule.mitreAtlas,
-      nistAiRmf:   rule.nistAiRmf,
+      normalized: matchedNormalized || undefined,
+      location: getLocation(matchContent, match.index),
+      owasp: rule.owasp,
+      mitreAtlas: rule.mitreAtlas,
+      nistAiRmf: rule.nistAiRmf,
     });
   }
 
@@ -292,27 +293,34 @@ export const sanitizeSkillMarkdown = (
   // When an instruction override is combined with a network or code execution vector,
   // escalate the combined flag to danger even if individual flags were caution.
   const categories = new Set(flags.map((f) => f.category));
-  const hasInjection = categories.has("prompt-injection") || categories.has("identity-hijack");
-  const hasExecution = categories.has("data-exfiltration") || categories.has("script-injection");
+  const hasInjection =
+    categories.has("prompt-injection") || categories.has("identity-hijack");
+  const hasExecution =
+    categories.has("data-exfiltration") || categories.has("script-injection");
   if (hasInjection && hasExecution) {
     flags.push({
-      ruleId:      "SS900",
-      ruleName:    "lethal-trifecta-composite",
-      severity:    "danger",
-      category:    "prompt-injection",
-      description: "Composite risk: instruction override combined with network/code-execution vector (Lethal Trifecta).",
-      matched:     "(multiple patterns)",
-      owasp:       ["Agentic Instruction and Tool Manipulation", "Data and Resource Exfiltration"],
-      mitreAtlas:  ["Exfiltration"],
-      nistAiRmf:   ["Measure", "Manage"],
+      ruleId: "SS900",
+      ruleName: "lethal-trifecta-composite",
+      severity: "danger",
+      category: "prompt-injection",
+      description:
+        "Composite risk: instruction override combined with network/code-execution vector (Lethal Trifecta).",
+      matched: "(multiple patterns)",
+      owasp: [
+        "Agentic Instruction and Tool Manipulation",
+        "Data and Resource Exfiltration",
+      ],
+      mitreAtlas: ["Exfiltration"],
+      nistAiRmf: ["Measure", "Manage"],
     });
   }
 
-  const activeFlags = suppressedIds.size > 0
-    ? flags.filter((f) => !f.ruleId || !suppressedIds.has(f.ruleId))
-    : flags;
+  const activeFlags =
+    suppressedIds.size > 0
+      ? flags.filter((f) => !f.ruleId || !suppressedIds.has(f.ruleId))
+      : flags;
 
-  const hasDanger  = activeFlags.some((f) => f.severity === "danger");
+  const hasDanger = activeFlags.some((f) => f.severity === "danger");
   const hasCaution = activeFlags.some((f) => f.severity === "caution");
 
   const severity = hasDanger ? "danger" : hasCaution ? "caution" : "safe";

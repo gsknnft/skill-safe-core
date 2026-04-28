@@ -1,61 +1,7 @@
+import { ResolveMarkdownFileOptions, ResolvedMarkdownFile } from "src";
+import { GitHubContentResponse, GitHubContentFile, GitHubContentDirectory } from "./types";
+
 const PREFERRED_MARKDOWN_FILES = ["SKILL.md", "skill.md", "README.md", "readme.md", "index.md"];
-
-export type MarkdownFileSource =
-  | "github"
-  | "registry"
-  | "souls"
-  | "hermes"
-  | "marketplace"
-  | "gitlab"
-  | "huggingface"
-  | "url"
-  | "unknown";
-
-export type ResolveMarkdownFileOptions = {
-  owner?: string;
-  repo?: string;
-  branch?: string;
-  path?: string;
-  source?: MarkdownFileSource;
-  /**
-   * Optional API endpoint for source hosts with GitHub-compatible contents
-   * responses. If provided, it is used directly.
-   */
-  apiUrl?: string;
-  /** Injected fetch implementation for tests, workers, or custom runtimes. */
-  fetcher?: typeof fetch;
-  /** Optional auth token. Defaults to GITHUB_TOKEN for GitHub sources in Node. */
-  token?: string;
-  /** Preferred markdown entrypoints, in order. */
-  preferredFileNames?: string[];
-  /** Whether to inspect one level of subdirectories for SKILL.md. Defaults true. */
-  scanSubdirectories?: boolean;
-};
-
-export type ResolvedMarkdownFile = {
-  resolvedUrl: string;
-  source: MarkdownFileSource;
-  owner?: string;
-  repo?: string;
-  branch?: string;
-  path?: string;
-};
-
-type GitHubContentFile = {
-  type: "file";
-  name: string;
-  path: string;
-  download_url?: string | null;
-};
-
-type GitHubContentDirectory = {
-  type: "dir";
-  name: string;
-  path: string;
-  url?: string;
-};
-
-type GitHubContentResponse = GitHubContentFile | GitHubContentDirectory | Array<GitHubContentFile | GitHubContentDirectory>;
 
 const getProcessEnv = (key: string): string | undefined => {
   if (typeof process === "undefined") return undefined;

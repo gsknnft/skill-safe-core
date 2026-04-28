@@ -2,7 +2,6 @@
 import { stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type {  } from "./policy.js";
 import {
   getPolicyPreset,
   isPolicyPreset,
@@ -21,11 +20,11 @@ import {
 import { stringifySkillSafeSarifJson } from "./sarif.js";
 import { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 import {
-  auditSuppressions,
-  type SuppressionAuditReport,
+  auditSuppressions
 } from "./suppressionAudit.js";
 import { requiresSanitization } from "./trust.js";
 import type {
+  SuppressionAuditReport,
   NpmSourcePolicy,
   SkillSafeFullReport,
   SuppressionMode,

@@ -7,13 +7,9 @@
  */
 
 import type {
-  GovernanceFramework,
   GovernanceMapping,
-  MappingConfidence,
   SanitizationCategory,
 } from "./types.js";
-
-export type { GovernanceFramework, GovernanceMapping, MappingConfidence };
 
 // ---------------------------------------------------------------------------
 // Registry

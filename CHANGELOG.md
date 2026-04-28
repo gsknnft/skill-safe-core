@@ -69,6 +69,15 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
   - `@gsknnft/skill-safe/policy`
 - Added package subpath export:
   - `@gsknnft/skill-safe/suppression-audit`
+- Added governance mapping validation script:
+
+```bash
+pnpm validate:mappings
+```
+- Added tests for mapping coverage and suppression parsing.
+
+## Security
+Suppression comments are parsed for audit, but not honored by default when scanning untrusted content.
 
 ### Changed
 
