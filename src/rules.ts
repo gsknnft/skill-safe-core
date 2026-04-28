@@ -664,4 +664,47 @@ export const RULES: RuleDefinition[] = [
     description: "Exfiltrates content via the system clipboard.",
     governance: [OWASP_SENSITIVE_DISCLOSURE, NIST_MAP],
   },
+
+  // -- v0.4 credential, cloud, container, and URL-token rules ----------------------
+
+  {
+    id: "SS150",
+    name: "git-credentials-read",
+    pattern:
+      /(?:git\s+credential|(?:read|cat|open|load)\s+(?:.*?\/)?\.git-credentials|(?:read|cat|open|load)\s+(?:.*?\/)?\.config\/git\/credentials)/i,
+    severity: "danger",
+    category: "data-exfiltration",
+    description: "Reads Git credential helper output or local Git credential files.",
+    governance: [OWASP_SENSITIVE_DISCLOSURE, MITRE_EXFIL, NIST_MAP],
+  },
+  {
+    id: "SS151",
+    name: "cloud-metadata-endpoint",
+    pattern:
+      /(?:169\.254\.169\.254|metadata\.google\.internal|metadata\.azure\.com|169\.254\.170\.2|100\.100\.100\.200)/i,
+    severity: "danger",
+    category: "data-exfiltration",
+    description: "References a cloud instance metadata endpoint that may expose credentials.",
+    governance: [OWASP_SENSITIVE_DISCLOSURE, MITRE_EXFIL, NIST_MAP],
+  },
+  {
+    id: "SS152",
+    name: "container-escape-primitive",
+    pattern:
+      /(?:--privileged|hostPID\s*:\s*true|hostNetwork\s*:\s*true|\/proc\/1\/root|\/var\/run\/docker\.sock|docker\s+run[\s\S]{0,120}-v\s+\/:\/host)/i,
+    severity: "danger",
+    category: "script-injection",
+    description: "References container escape or host-privilege primitives.",
+    governance: [OWASP_EXCESSIVE_AGENCY, MITRE_PERSISTENCE, NIST_GOVERN],
+  },
+  {
+    id: "SS153",
+    name: "token-in-url",
+    pattern:
+      /https?:\/\/[^\s'"`<>)]{0,180}[?&](?:token|api[_-]?key|access[_-]?token|auth|secret|password)=([^&\s'"`<>)]{8,})/i,
+    severity: "danger",
+    category: "data-exfiltration",
+    description: "Embeds a token, API key, secret, or password in a URL.",
+    governance: [OWASP_SENSITIVE_DISCLOSURE, MITRE_EXFIL, NIST_MAP],
+  },
 ];

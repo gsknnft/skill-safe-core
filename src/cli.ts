@@ -3,6 +3,7 @@ import { stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { loadConfig, resolveConfig } from "./config.js";
+import { createCoverageReport, formatCoverageReportMarkdown } from "./coverage.js";
 import {
   getPolicyPreset,
   isPolicyPreset,
@@ -47,7 +48,9 @@ type Args = {
   preset: SkillSafePolicyPreset;
   npmPolicy: NpmSourcePolicy;
   extraRules: import("./types.js").RuleDefinition[];
+  scan: ReturnType<typeof resolveConfig>["scan"];
   auditSuppressions: boolean;
+  coverage: boolean;
   help: boolean;
 };
 
@@ -105,11 +108,12 @@ Options:
   --full              Include full finding mappings/evidence in human output.
   --dir <path>        Recursively scan SKILL.md/skill.md files under a directory.
   --out <path>        Write the report to a file (JSON, SARIF, or Markdown).
-  --preset <name>     strict | marketplace | workspace. Default: workspace.
+  --preset <name>     strict | marketplace | workspace | permissive. Default: workspace.
   --fail-on <mode>    never | review | block. Default: block.
   --honor-suppressions  Apply skill-safe-ignore comments. Use only for trusted sources.
   --no-suppressions     Disable suppression parsing.
-  --audit-suppressions  Report invalid or unused skill-safe-ignore comments.
+  --audit-suppressions  Report invalid, expired, or unused skill-safe-ignore comments.
+  --coverage          Include rule coverage for the scanned batch.
   --help              Show this help.
 
 Exit codes:
@@ -133,7 +137,9 @@ const parseArgs = (argv: string[], defaults: ReturnType<typeof resolveConfig>): 
     preset: defaults.preset,
     npmPolicy: defaults.npmPolicy,
     extraRules: defaults.extraRules,
+    scan: defaults.scan,
     auditSuppressions: false,
+    coverage: false,
     help: false,
   };
 
@@ -161,7 +167,7 @@ const parseArgs = (argv: string[], defaults: ReturnType<typeof resolveConfig>): 
       const preset = argv[++i] ?? "";
       if (!isPolicyPreset(preset)) {
         throw new Error(
-          "--preset must be one of: strict, marketplace, workspace",
+          "--preset must be one of: strict, marketplace, workspace, permissive",
         );
       }
       const nextPolicy = getPolicyPreset(preset);
@@ -181,6 +187,8 @@ const parseArgs = (argv: string[], defaults: ReturnType<typeof resolveConfig>): 
       args.suppressionMode = "disabled";
     } else if (value === "--audit-suppressions") {
       args.auditSuppressions = true;
+    } else if (value === "--coverage") {
+      args.coverage = true;
     } else if (value.startsWith("--")) {
       throw new Error(`Unknown option: ${value}`);
     } else if (!args.source) {
@@ -212,6 +220,7 @@ const renderSuppressionAudit = (
     "",
     `OK: ${audit.ok ? "yes" : "no"}`,
     `Invalid suppressions: ${audit.invalid}`,
+    `Expired suppressions: ${audit.expired}`,
     `Unused suppressions: ${audit.unused}`,
   ];
   if (audit.findings.length) {
@@ -223,6 +232,15 @@ const renderSuppressionAudit = (
     }
   }
   return `${lines.join("\n")}\n`;
+};
+
+const renderCoverage = (
+  report: SkillSafeFullReport,
+  args: Args,
+): string => {
+  const coverage = createCoverageReport(report);
+  if (args.json) return `${JSON.stringify(coverage, null, 2)}\n`;
+  return formatCoverageReportMarkdown(coverage);
 };
 
 const severityRank = {
@@ -260,8 +278,33 @@ const scanDirectory = async (
   const { report } = await scanSkillDirectory(resolve(dirPath), {
     suppressionMode: args.suppressionMode,
     extraRules: args.extraRules.length ? args.extraRules : undefined,
+    ignoreDirs: args.scan.exclude,
+    maxDepth: args.scan.maxDepth,
   });
   return report;
+};
+
+const scanConfiguredIncludes = async (
+  args: Args,
+): Promise<SkillSafeFullReport> => {
+  const documents: SkillSafeFullReport["documents"] = [];
+  for (const includePath of args.scan.include) {
+    const absolutePath = resolve(includePath);
+    const pathStat = await stat(absolutePath);
+    const childReport = pathStat.isDirectory()
+      ? await scanDirectory(absolutePath, args)
+      : await scanFile(absolutePath, args);
+    documents.push(...childReport.documents);
+  }
+
+  if (documents.length === 0) {
+    throw new Error("No documents found from config scan.include entries.");
+  }
+
+  return createSkillSafeReport({
+    mode: "batch",
+    documents,
+  });
 };
 
 const scanText = (text: string, args: Args): SkillSafeFullReport => {
@@ -372,6 +415,8 @@ async function main(): Promise<void> {
     } catch {
       report = await scanSource(args.source, args);
     }
+  } else if (args.scan.include.length > 0) {
+    report = await scanConfiguredIncludes(args);
   } else {
     report = await scanSource(DEFAULT_SOURCE, args);
   }
@@ -383,11 +428,13 @@ async function main(): Promise<void> {
     // Emit a single JSON envelope so consumers can parse everything in one pass.
     const envelope: Record<string, unknown> = { report };
     if (audit) envelope.suppressionAudit = audit;
+    if (args.coverage) envelope.coverage = createCoverageReport(report);
     output = `${JSON.stringify(envelope, null, 2)}\n`;
-  } else if (args.auditSuppressions) {
+  } else if (args.auditSuppressions || args.coverage) {
     // Always emit both the report and the audit in human-readable mode.
     output = renderReport(report, args);
     if (audit) output += `\n${renderSuppressionAudit(audit, args)}`;
+    if (args.coverage) output += `\n${renderCoverage(report, args)}`;
   } else {
     output = renderReport(report, args);
   }

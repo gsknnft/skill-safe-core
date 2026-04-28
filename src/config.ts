@@ -56,7 +56,7 @@ function parseConfig(raw: unknown, filePath: string): SkillSafeConfig {
   if ("preset" in raw) {
     if (!isPolicyPreset(raw.preset as string)) {
       throw new Error(
-        `${filePath}: "preset" must be one of: strict, marketplace, workspace`,
+        `${filePath}: "preset" must be one of: strict, marketplace, workspace, permissive`,
       );
     }
     config.preset = raw.preset as SkillSafePolicyPreset;

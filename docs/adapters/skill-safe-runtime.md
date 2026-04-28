@@ -1,19 +1,47 @@
-# skill-safe-runtime Sandbox Guide
+# skill-safe-runtime Adapter Guide
 
-This guide explains how to use the runtime sandbox for shadow execution and behavioral checks.
+This guide describes the intended boundary between `@gsknnft/skill-safe` and
+`@gsknnft/skill-safe-runtime`.
 
-## Usage
-- Run the skill in the sandbox to observe tool calls and side effects.
-- The sandbox simulates execution and captures any dangerous or unexpected behavior.
+`skill-safe` owns deterministic static evidence before install. Runtime
+enforcement belongs to the host runtime or the optional runtime package.
 
-## Example
-```js
-import { runSkillInSandbox } from '@gsknnft/skill-safe-runtime';
+## Expected Flow
 
-const result = await runSkillInSandbox(skillMarkdown);
-// result includes observed tool calls, side effects, and a runtime risk assessment
+1. Scan skill markdown with `@gsknnft/skill-safe`.
+2. Install or enable only if host policy allows the static result.
+3. At execution time, apply runtime policy:
+   - tool allowlists by source trust
+   - filesystem/network constraints
+   - human approval for destructive actions
+   - trace capture for tool calls and side effects
+
+## Host Wrapper Sketch
+
+```ts
+import { sanitizeSkillMarkdown } from "@gsknnft/skill-safe";
+
+const staticResult = sanitizeSkillMarkdown(skillMarkdown);
+
+if (staticResult.report.recommendedAction === "block") {
+  throw new Error("Skill blocked before runtime");
+}
+
+// Host/runtime package owns actual execution controls.
+const runtimeResult = await runtimeMonitor.run({
+  skillId,
+  trust,
+  allowedTools: trust === "community" ? ["read_file"] : ["read_file", "fetch"],
+});
 ```
 
-## Blocking on Behavior
-- If the sandbox detects forbidden actions, escalate the report and block installation.
-- Use in CI or as a pre-install gate for high-trust environments.
+## Runtime Should Catch
+
+- tool calls outside the source trust policy
+- HITL bypass attempts during execution
+- unexpected write/delete/network escalation
+- tainted user or web content reaching dangerous sinks
+- concealed side effects
+
+The runtime report should reference the static report ID when possible so hosts
+can display one combined review record.

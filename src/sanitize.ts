@@ -187,10 +187,16 @@ export const parseSuppressions = (
     const lineRe = /<!--\s*skill-safe-ignore\s+(SS\w+)\s*:\s*(.+?)\s*-->/gi;
     let match: RegExpExecArray | null;
     while ((match = lineRe.exec(lines[i]!)) !== null) {
+      const rawReason = match[2]!.trim();
+      const expiryMatch = /\s+--\s*expires:\s*(\d{4}-\d{2}-\d{2})\s*$/i.exec(rawReason);
+      const reason = expiryMatch
+        ? rawReason.slice(0, expiryMatch.index).trim()
+        : rawReason;
       suppressions.push({
         ruleId: match[1]!,
-        reason: match[2]!.trim(),
+        reason,
         line: i + 1,
+        ...(expiryMatch ? { expiresAt: expiryMatch[1] } : {}),
       });
     }
   }

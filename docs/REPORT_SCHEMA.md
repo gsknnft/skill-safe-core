@@ -1,7 +1,7 @@
 # REPORT_SCHEMA.md
 
 Canonical report contract for `@gsknnft/skill-safe` and downstream consumers.
-This schema is stable as of `v0.2.0` and should remain backward-compatible for
+This schema is stable as of `v0.4.0` and should remain backward-compatible for
 future `0.x` releases where practical.
 
 ## Overview
@@ -59,6 +59,7 @@ type SkillScanReport = {
 type SanitizationResult = {
   severity: "safe" | "caution" | "danger";
   flags: SanitizationFlag[];
+  suppressions: SanitizationSuppression[];
   safeToInstall: boolean;
   report: SkillScanReport;
 };
@@ -94,6 +95,30 @@ and includes 1-based line/column plus UTF-16 and UTF-8 offsets.
 `normalized` is present when the match was found only after de-obfuscation, such
 as zero-width removal, Unicode escape decoding, HTML entity decoding, or spaced
 command/protocol normalization.
+
+## SanitizationSuppression
+
+Suppression comments are parsed for audit. They are report-only by default and
+are only honored when the caller explicitly opts into `suppressionMode:
+"honor"`.
+
+```ts
+type SanitizationSuppression = {
+  ruleId: string;
+  reason: string;
+  line: number;
+  expiresAt?: string;
+};
+```
+
+Supported syntax:
+
+```md
+<!-- skill-safe-ignore SS001: tracked false positive -- expires: 2026-06-01 -->
+```
+
+Expired suppressions are reported by the suppression audit and should be treated
+as review findings by host applications.
 
 ## Categories
 
@@ -209,6 +234,61 @@ type SkillSafeReportSummary = {
 `suppressions` counts parsed `skill-safe-ignore` comments across all scanned
 documents. Suppressions are report-only by default; hosts must opt into honoring
 them for trusted workspace or verified sources.
+
+## SuppressionAuditReport
+
+The CLI and library can emit a suppression audit alongside the full report.
+
+```ts
+type SuppressionAuditReport = {
+  version: "skill-safe.suppression-audit.v1";
+  ok: boolean;
+  invalid: number;
+  unused: number;
+  expired: number;
+  findings: Array<{
+    issue: "invalid-rule" | "unused-suppression" | "expired-suppression";
+    ruleId: string;
+    path?: string;
+    line?: number;
+    reason?: string;
+    expiresAt?: string;
+  }>;
+};
+```
+
+`ok` is false when any invalid, unused, or expired suppression exists.
+
+## SkillSafeCoverageReport
+
+Batch scans can produce a coverage report with `--coverage` or the public
+`createCoverageReport()` helper.
+
+```ts
+type SkillSafeCoverageReport = {
+  version: "skill-safe.coverage.v1";
+  generatedAt: string;
+  totalRules: number;
+  firedRules: number;
+  unfiredRules: number;
+  rules: Array<{
+    ruleId: string;
+    name: string;
+    category: SanitizationCategory;
+    severity: "caution" | "danger";
+    fired: boolean;
+    count: number;
+  }>;
+  categories: Record<string, {
+    totalRules: number;
+    firedRules: number;
+    findings: number;
+  }>;
+};
+```
+
+Coverage is an operator signal, not a safety decision. It helps maintainers see
+which rules fired across a fixture set, marketplace ingestion pass, or CI scan.
 
 ## Integration Requirements
 

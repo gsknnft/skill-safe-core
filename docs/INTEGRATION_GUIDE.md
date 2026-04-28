@@ -1,223 +1,199 @@
-# INTEGRATION_GUIDE.md
-**How to integrate `@gsknnft/skill-safe` into marketplaces, loaders, and agent harnesses.**
+# Integration Guide
 
-This guide explains how to use the static scanner (`skill-safe-core`), the semantic judge (`skill-safe-judge`), and the runtime monitor (`skill-safe-runtime`) in real systems.
+How to integrate `@gsknnft/skill-safe` into marketplaces, loaders, agent
+harnesses, and CI.
 
----
+`skill-safe` is the deterministic static gate. It does not run skills, call
+LLMs, sandbox tools, or approve transactions. Use it before install, then let
+host policy decide whether to allow, review, quarantine, or block.
 
-# 1. Overview
-
-Skill-safe provides **three layers** of protection:
+## Layers
 
 | Layer | Package | Purpose |
-|-------|---------|---------|
-| **v1 Static** | `@gsknnft/skill-safe-core` | Deterministic, zero-dependency scan |
-| **v2 Semantic** | `@gsknnft/skill-safe-judge` | Optional LLM-based intent analysis |
-| **v3 Runtime** | `@gsknnft/skill-safe-runtime` | Behavioral enforcement during execution |
+| --- | --- | --- |
+| Static | `@gsknnft/skill-safe` | Zero-dependency scan, reports, SARIF, policy presets |
+| Ledger | `@gsknnft/skill-ledger` | Manifest, inventory, doctor, skill library state |
+| UI | `@gsknnft/skill-ui` | Review workbench and manager surface |
+| Semantic | `@gsknnft/skill-safe-judge` | Optional LLM intent analysis |
+| Runtime | `@gsknnft/skill-safe-runtime` | Tool-call, taint, trace, and allowlist enforcement |
 
-Most integrations only need **v1**.
-Marketplaces and agent harnesses may add **v2**.
-High-security environments add **v3**.
-
----
-
-# 2. Minimal Integration (Static Only)
+## Minimal Static Integration
 
 ```ts
 import {
-  sanitizeSkillMarkdown,
-  resolveSkillTrustLevel,
   requiresSanitization,
-} from "@gsknnft/skill-safe-core";
+  resolveSkillTrustLevel,
+  sanitizeSkillMarkdown,
+} from "@gsknnft/skill-safe";
 
-export function scanSkill({ markdown, source, bundled }) {
+export function scanSkill({ markdown, source, bundled = false }) {
   const trust = resolveSkillTrustLevel(source, bundled);
 
   if (!requiresSanitization(trust)) {
-    return { safeToInstall: true, reason: "trusted-source" };
+    return {
+      safeToInstall: true,
+      recommendedAction: "allow",
+      reason: "trusted-source",
+    };
   }
 
-  const report = sanitizeSkillMarkdown(markdown);
-
-  if (!report.safeToInstall) {
-    throw new Error("Skill blocked: " + JSON.stringify(report.flags, null, 2));
-  }
-
-  return report;
-}
-```
-
-### When to use this:
-- Local agent UIs
-- Workspace skill loaders
-- GitHub imports
-- CLI tools
-
----
-
-# 3. Marketplace Integration (Claw3D / OpenClaw / souls.zip)
-
-Marketplaces must:
-
-1. **Always run the static scanner**
-2. **Store the full `SkillScanReport`**
-3. **Display trust badges**
-4. **Block or quarantine on `recommendedAction = "block"`**
-5. **Require user review for `"review"`**
-
-### Example ingestion pipeline:
-
-```ts
-const report = sanitizeSkillMarkdown(markdown);
-
-db.skills.insert({
-  id: skillId,
-  source,
-  report,
-  trust: resolveSkillTrustLevel(source, false),
-  createdAt: Date.now(),
-});
-```
-
-### Marketplace UI rules:
-
-| recommendedAction | UI Behavior |
-|-------------------|-------------|
-| `"allow"` | Install button enabled |
-| `"review"` | Yellow badge + “Review Required” |
-| `"block"` | Red badge + Install disabled |
-
----
-
-# 4. Adding the Semantic Judge (Optional v2)
-
-```ts
-import { sanitizeSkillMarkdown } from "@gsknnft/skill-safe-core";
-import { llamaCppJudge } from "@gsknnft/skill-safe-judge";
-
-async function scanWithJudge(markdown) {
-  const staticReport = sanitizeSkillMarkdown(markdown);
-
-  const semantic = await llamaCppJudge.judge({
-    markdown,
-    excerpts: staticReport.flags.map(f => f.excerpt).filter(Boolean),
-    findings: staticReport.flags,
-  });
+  const result = sanitizeSkillMarkdown(markdown);
 
   return {
-    static: staticReport,
-    semantic,
+    trust,
+    safeToInstall: result.safeToInstall,
+    recommendedAction: result.report.recommendedAction,
+    report: result.report,
+    flags: result.flags,
   };
 }
 ```
 
-### When to use this:
-- Marketplace submissions
-- Enterprise agent deployments
-- High-risk community skills
+## Directory / Marketplace Scan
 
----
-
-# 5. Runtime Enforcement (v3)
+Use batch scanning when ingesting a directory or marketplace submission set.
 
 ```ts
-import { createRuntimeMonitor } from "@gsknnft/skill-safe-runtime";
+import { scanSkillDirectory } from "@gsknnft/skill-safe";
 
-const monitor = createRuntimeMonitor({
-  allowlist: {
-    "verified": ["read_file", "fetch"],
-    "community": ["read_file"],
-    "unknown": [],
+const { report, files } = await scanSkillDirectory("./skills", {
+  failOn: "review",
+  suppressionMode: "report-only",
+  resolveSource(file) {
+    if (file.relativePath.startsWith("internal/")) return "workspace";
+    return "community";
   },
-  permissionDecay: true,
-  traceExporter: new LangfuseExporter(),
 });
 
-// Wrap agent execution
-const result = await monitor.run(agent, userInput);
-```
-
-### What runtime catches:
-- HITL bypass
-- Self-approval
-- Concealed actions
-- Network exfiltration
-- Privilege escalation
-- Dangerous tool-call sequences
-
----
-
-# 6. Integration Patterns by Source
-
-### **Local / Workspace**
-- Always scan
-- Allow `"review"` installs
-- Block `"block"`
-
-### **GitHub**
-- Treat as `community`
-- Always scan
-- `"review"` → warn
-- `"block"` → reject
-
-### **Unknown ZIP / souls.zip**
-- Treat as `unknown`
-- Always scan
-- `"review"` → quarantine
-- `"block"` → reject
-
-### **Marketplace**
-- Store report
-- Display trust badge
-- Enforce recommendedAction
-
----
-
-# 7. Example: Claw3D Skill Loader
-
-```ts
-const report = sanitizeSkillMarkdown(markdown);
-
-if (!report.safeToInstall) {
-  return ui.showBlockScreen(report);
+if (!report.ok) {
+  // Store report, open review queue, block installs, or upload SARIF.
 }
+```
 
-if (report.recommendedAction === "review") {
-  return ui.showReviewScreen(report);
+Per-file source override is useful when a workspace mixes verified internal
+skills, community imports, and temporary local experiments in one tree.
+
+## Config-Driven CLI
+
+For repeatable CI or monorepos, add `skill-safe.config.json`:
+
+```json
+{
+  "preset": "marketplace",
+  "failOn": "review",
+  "suppressionMode": "report-only",
+  "npmPolicy": {
+    "minAgeDays": 7,
+    "requireProvenance": false
+  },
+  "scan": {
+    "include": ["skills", "examples/skills"],
+    "exclude": ["node_modules", "dist"],
+    "maxDepth": 12
+  }
 }
-
-return installSkill(skillId, markdown);
 ```
 
----
-
-# 8. Versioning & Stability
-
-The report schema is **locked** for:
-
-```
-@ gsknnft/skill-safe-core v0.1.0
-```
-
-Future versions may add fields but **never break existing ones**.
-
----
-
-# 9. Testing
+Then run:
 
 ```sh
-pnpm test
-pnpm build
-pnpm pack --dry-run
+skill-safe --json --coverage --audit-suppressions
 ```
 
----
+With no explicit target, the CLI scans configured `scan.include` paths.
 
-# 10. Related Docs
+## Policy Presets
 
-- `REPORT_SCHEMA.md`
-- `RULES_REFERENCE.md`
-- `RISK_SCORING.md`
-- `SARIF_OUTPUT.md`
-- `skill-safe-judge` adapter docs
-- `skill-safe-runtime` sandbox docs
+| Preset | Intended use |
+| --- | --- |
+| `strict` | Security review and high-assurance marketplaces |
+| `marketplace` | Public/community skill ingestion |
+| `workspace` | Local trusted workspaces |
+| `permissive` | Local exploration without CI failure |
+
+Example:
+
+```sh
+skill-safe ./skills --preset strict --sarif --out skill-safe.sarif
+skill-safe ./skills --preset permissive --coverage --fail-on never
+```
+
+## Suppression Audit
+
+Suppressions are report-only by default. Audit them regularly:
+
+```sh
+skill-safe ./skills --audit-suppressions --json --fail-on never
+```
+
+Suppression syntax:
+
+```md
+<!-- skill-safe-ignore SS001: tracked false positive -- expires: 2026-06-01 -->
+```
+
+The audit reports:
+
+- invalid rule IDs
+- unused suppressions
+- expired suppressions
+
+## Marketplace Flow
+
+1. Discover or import candidates with `skill-ledger`.
+2. Scan with `skill-safe` using `marketplace` or `strict`.
+3. Store the full JSON report and SARIF artifact.
+4. Display:
+   - recommended action
+   - risk score
+   - findings
+   - governance mappings
+   - suppression audit state
+5. Require review for `review`.
+6. Quarantine or block `block`.
+
+## Wallet / NFT Host Flow
+
+`skill-safe` is not a wallet security layer. Wallet-aware hosts should use it as
+the first gate only:
+
+1. Scan candidate skill markdown.
+2. Block dangerous static findings.
+3. Require human review for caution/review findings.
+4. Apply host runtime policy, wallet scopes, Safe{Core}, multisig, or approval
+   gates only when a skill attempts asset-moving actions.
+
+## CI Flow
+
+Recommended strict ingestion:
+
+```sh
+skill-safe ./skills \
+  --preset strict \
+  --audit-suppressions \
+  --coverage \
+  --sarif \
+  --out skill-safe.sarif
+```
+
+Upload SARIF to GitHub Code Scanning or your CI security dashboard.
+
+## Versioning
+
+Report envelopes are versioned:
+
+- `skill-safe.report.v1`
+- `skill-safe.full-report.v1`
+- `skill-safe.suppression-audit.v1`
+- `skill-safe.coverage.v1`
+
+Future additions should be additive where practical.
+
+## Related Docs
+
+- [Report schema](REPORT_SCHEMA.md)
+- [Rules reference](RULES_REFERENCE.md)
+- [SARIF output](SARIF_OUTPUT.md)
+- [Risk scoring](RISK_SCORING.md)
+- [Supply-chain hardening](SUPPLY_CHAIN.md)
+- [Skill suite boundaries](SKILL_SUITE.md)

@@ -34,7 +34,7 @@ long-lived secret tokens involved.
 npm audit signatures @gsknnft/skill-safe
 
 # Verify a specific version
-npm install @gsknnft/skill-safe@0.3.0 --dry-run
+npm install @gsknnft/skill-safe@0.4.0 --dry-run
 npm audit signatures
 ```
 
@@ -67,7 +67,7 @@ pnpm publish --provenance --access public
   `pnpm-lock.yaml`. The lockfile is committed and used with `--frozen-lockfile`
   in CI.
 - **git tag signing**: Release tags should be signed with the maintainer's GPG
-  key: `git tag -s v0.3.0 -m "v0.3.0"`. Verify: `git verify-tag v0.3.0`.
+  key: `git tag -s v0.4.0 -m "v0.4.0"`. Verify: `git verify-tag v0.4.0`.
 - **SLSA Build Level 2**: Provenance attestations satisfy SLSA L2 — hosted
   build platform, parameterized build, no persistent credentials.
 

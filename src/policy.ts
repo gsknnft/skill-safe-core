@@ -9,5 +9,10 @@ export function getPolicyPreset(preset: SkillSafePolicyPreset): SkillSafePolicy 
 }
 
 export function isPolicyPreset(value: string): value is SkillSafePolicyPreset {
-  return value === "strict" || value === "marketplace" || value === "workspace";
+  return (
+    value === "strict" ||
+    value === "marketplace" ||
+    value === "workspace" ||
+    value === "permissive"
+  );
 }

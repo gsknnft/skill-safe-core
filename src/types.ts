@@ -5,7 +5,11 @@ export type SkillTrustLevel =
   | "community" // external source (GitHub, registry, etc.)
   | "unknown"; // unrecognized — treat as untrusted
 
-export type SkillSafePolicyPreset = "strict" | "marketplace" | "workspace";
+export type SkillSafePolicyPreset =
+  | "strict"
+  | "marketplace"
+  | "workspace"
+  | "permissive";
 
 // ---------------------------------------------------------------------------
 // Risk Level — maps a 0-100 risk score to a named severity tier for UI display.
@@ -305,6 +309,8 @@ export type SanitizationSuppression = {
   reason: string;
   /** 1-based line number of the suppression comment. */
   line: number;
+  /** Optional ISO date from "-- expires: YYYY-MM-DD". */
+  expiresAt?: string;
 };
 
 export type SanitizationResult = {
@@ -323,7 +329,7 @@ export type SuppressionAuditFinding = {
   ruleId: string;
   line: number;
   reason: string;
-  issue: "invalid-rule" | "unused-suppression";
+  issue: "invalid-rule" | "unused-suppression" | "expired-suppression";
 };
 
 export type SuppressionAuditReport = {
@@ -331,7 +337,25 @@ export type SuppressionAuditReport = {
   ok: boolean;
   invalid: number;
   unused: number;
+  expired: number;
   findings: SuppressionAuditFinding[];
+};
+
+export type RuleCoverageEntry = {
+  ruleId: SkillRuleId;
+  ruleName: string;
+  category: SanitizationCategory;
+  severity: SanitizationSeverity;
+  fired: number;
+};
+
+export type SkillSafeCoverageReport = {
+  version: "skill-safe.coverage.v1";
+  totalRules: number;
+  firedRules: number;
+  neverFiredRules: number;
+  rules: RuleCoverageEntry[];
+  categories: Record<string, { total: number; fired: number }>;
 };
 
 export type SkillSafeDocumentReport = {

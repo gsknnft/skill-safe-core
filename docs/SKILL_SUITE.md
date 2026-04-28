@@ -121,11 +121,11 @@ bump the version field.
 
 | Package | Current | Compatible with |
 |---|---:|---|
-| `@gsknnft/skill-safe` | 0.3.x | report v1, suppression-audit v1 |
-| `@gsknnft/skill-ledger` | 0.1.x | skill-safe ^0.3.0, manifest v1 |
+| `@gsknnft/skill-safe` | 0.4.x | report v1, suppression-audit v1 |
+| `@gsknnft/skill-ledger` | 0.1.x | skill-safe ^0.4.0, manifest v1 |
 | `@gsknnft/skill-ui` | 0.1.x | skill-safe report v1, ledger manifest v1 |
-| `@gsknnft/skill-safe-judge` | planned | skill-safe ^0.3.0 |
-| `@gsknnft/skill-safe-runtime` | planned | skill-safe ^0.3.0 |
+| `@gsknnft/skill-safe-judge` | planned | skill-safe ^0.4.0 |
+| `@gsknnft/skill-safe-runtime` | planned | skill-safe ^0.4.0 |
 
 After `v1.0`, each package follows semver independently. Report schema changes
 are additive-only within a version field. Breaking changes bump the version string.

@@ -82,6 +82,30 @@ For wallet or NFT agents, the expected flow is:
 That separation keeps the scanner dependency-light and makes it useful outside
 any single wallet, chain, agent runtime, or marketplace.
 
+## How Is This Different From A Skill Manager?
+
+`skill-safe` is the auditor, not the installer.
+
+It validates skill content and source context:
+
+- scan `SKILL.md` / skill markdown content
+- normalize trust source labels
+- attach stable rule IDs and location evidence
+- emit JSON, Markdown, and SARIF reports
+- apply source policy such as npm age/provenance gates
+
+It does not manage lifecycle:
+
+- no symlinking into Cursor, Windsurf, Claude, OpenClaw, or local agent folders
+- no install/uninstall state
+- no skill inventory database
+- no content-addressed storage
+- no runtime tool allowlists
+
+Use `@gsknnft/skill-ledger` for manifesting, inventory, and lifecycle state.
+Use `@gsknnft/skill-ui` for review and manager surfaces. Use `skill-safe` as
+the security gate those tools call before a skill becomes active.
+
 ## Quick Demo
 
 ```sh
@@ -166,6 +190,7 @@ Policy presets make CI setup one flag:
 skill-safe ./skills --preset strict --sarif --out skill-safe.sarif
 skill-safe ./skills --preset marketplace --json
 skill-safe ./skills --preset workspace
+skill-safe ./skills --preset permissive --coverage
 ```
 
 Presets configure failure threshold, suppression handling, and npm source
@@ -176,15 +201,53 @@ policy together:
 | `strict` | `review` | disabled | 14 days + provenance required |
 | `marketplace` | `review` | report-only | 7 days |
 | `workspace` | `block` | report-only | 2 days |
+| `permissive` | `never` | report-only | disabled |
 
-Suppression audit catches stale or mistyped ignore comments:
+Suppression audit catches stale, expired, or mistyped ignore comments:
 
 ```sh
 skill-safe ./skills --audit-suppressions --json --fail-on never
 ```
 
 The audit reports suppressions for unknown rule IDs and suppressions that no
-longer match an active finding.
+longer match an active finding. Suppressions can include an expiry:
+
+```md
+<!-- skill-safe-ignore SS001: tracked false positive -- expires: 2026-06-01 -->
+```
+
+Rule coverage shows which built-in rules fired across a batch:
+
+```sh
+skill-safe ./skills --coverage --fail-on never
+```
+
+Project config removes repeated CLI flags in monorepos and marketplaces:
+
+```json
+{
+  "preset": "marketplace",
+  "failOn": "review",
+  "suppressionMode": "report-only",
+  "npmPolicy": {
+    "minAgeDays": 7,
+    "requireProvenance": false
+  },
+  "scan": {
+    "include": ["skills", "examples/skills"],
+    "exclude": ["node_modules", "dist"],
+    "maxDepth": 12
+  }
+}
+```
+
+Save that as `skill-safe.config.json`, then run:
+
+```sh
+skill-safe --json --coverage --audit-suppressions
+```
+
+With no explicit target, configured `scan.include` paths are scanned.
 
 ## What It Catches
 
@@ -279,6 +342,18 @@ The full report envelope includes:
 - recommended action
 - governance mappings
 - JSON and Markdown rendering
+
+For fixture and rule-health checks, use coverage helpers:
+
+```ts
+import {
+  createCoverageReport,
+  formatCoverageReportMarkdown,
+} from "@gsknnft/skill-safe";
+
+const coverage = createCoverageReport(report);
+console.log(formatCoverageReportMarkdown(coverage));
+```
 
 ## Risk Score Bands
 
@@ -410,14 +485,16 @@ Policy presets configure the fail threshold, suppression mode, and npm source po
 
 | Preset | `failOn` | `suppressionMode` | npm `minAgeDays` | Use case |
 |---|---|---|---|---|
-| `strict` | `review` | `disabled` | 7 | High-assurance marketplaces, security reviews |
-| `marketplace` | `review` | `report-only` | 2 | Public skill stores, community ingestion |
-| `workspace` | `block` | `report-only` | 0 | Local dev, trusted org workspace |
+| `strict` | `review` | `disabled` | 14 | High-assurance marketplaces, security reviews |
+| `marketplace` | `review` | `report-only` | 7 | Public skill stores, community ingestion |
+| `workspace` | `block` | `report-only` | 2 | Local dev, trusted org workspace |
+| `permissive` | `never` | `report-only` | 0 | Local exploration without CI failure |
 
 ```sh
 skill-safe ./skills --preset strict --json
 skill-safe ./skills --preset marketplace --sarif
 skill-safe ./skills --preset workspace --full
+skill-safe ./skills --preset permissive --coverage
 ```
 
 Suppression modes:

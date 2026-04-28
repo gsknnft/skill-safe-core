@@ -60,6 +60,10 @@ export {
 } from "./policy.js";
 
 export { auditSuppressions } from "./suppressionAudit.js";
+export {
+  createCoverageReport,
+  formatCoverageReportMarkdown,
+} from "./coverage.js";
 
 export { loadConfig, resolveConfig } from "./config.js";
 export type { ResolvedSkillSafeConfig } from "./config.js";
@@ -108,6 +112,8 @@ export type {
   SkillSafePolicyPreset,
   SuppressionAuditFinding,
   SuppressionAuditReport,
+  RuleCoverageEntry,
+  SkillSafeCoverageReport,
   GovernanceFramework,
   MappingConfidence,
   GovernanceMapping,

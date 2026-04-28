@@ -11,10 +11,10 @@ This guide explains how to integrate semantic/LLM-based judging into the skill-s
 ## Example
 
 ```js
-import { scanSkill } from "@gsknnft/skill-safe-core";
+import { sanitizeSkillMarkdown } from "@gsknnft/skill-safe";
 import { judgeSkill } from "@gsknnft/skill-safe-judge";
 
-const staticReport = scanSkill(skillMarkdown);
+const staticReport = sanitizeSkillMarkdown(skillMarkdown);
 const judgedReport = await judgeSkill(skillMarkdown, staticReport);
 // judgedReport includes semantic flags and may escalate riskScore or recommendedAction
 ```

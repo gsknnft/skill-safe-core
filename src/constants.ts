@@ -71,6 +71,12 @@ export const POLICY_PRESETS: Record<SkillSafePolicyPreset, SkillSafePolicy> = {
     suppressionMode: "report-only",
     npmPolicy: { minAgeDays: 2, requireProvenance: false },
   },
+  permissive: {
+    preset: "permissive",
+    failOn: "never",
+    suppressionMode: "report-only",
+    npmPolicy: { minAgeDays: 0, requireProvenance: false },
+  },
 };
 
 export const CATEGORY_RULE_META: Record<SanitizationCategory, SarifRuleMeta> = {
@@ -250,11 +256,12 @@ Options:
   --full              Include full finding mappings/evidence in human output.
   --dir <path>        Recursively scan SKILL.md/skill.md files under a directory.
   --out <path>        Write the report to a file (JSON, SARIF, or Markdown).
-  --preset <name>     strict | marketplace | workspace. Default: workspace.
+  --preset <name>     strict | marketplace | workspace | permissive. Default: workspace.
   --fail-on <mode>    never | review | block. Default: block.
   --honor-suppressions  Apply skill-safe-ignore comments. Use only for trusted sources.
   --no-suppressions     Disable suppression parsing.
-  --audit-suppressions  Report invalid or unused skill-safe-ignore comments.
+  --audit-suppressions  Report invalid, expired, or unused skill-safe-ignore comments.
+  --coverage          Include rule coverage for the scanned batch.
   --help              Show this help.
 
 Exit codes:

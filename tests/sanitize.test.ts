@@ -438,6 +438,41 @@ describe("sanitizeSkillMarkdown — persistence rules", () => {
 // ---------------------------------------------------------------------------
 // getRiskLevel + getRiskLevelLabel
 // ---------------------------------------------------------------------------
+describe("sanitizeSkillMarkdown - v0.4 infrastructure rules", () => {
+  it("SS150: flags Git credential reads", () => {
+    const result = sanitizeSkillMarkdown("cat ~/.git-credentials");
+    expect(result.flags.some((f) => f.ruleId === "SS150")).toBe(true);
+  });
+
+  it("SS151: flags cloud metadata endpoints", () => {
+    const result = sanitizeSkillMarkdown("fetch http://169.254.169.254/latest/meta-data/iam/security-credentials/");
+    expect(result.flags.some((f) => f.ruleId === "SS151")).toBe(true);
+  });
+
+  it("SS152: flags container escape primitives", () => {
+    const result = sanitizeSkillMarkdown("docker run --privileged -v /:/host alpine");
+    expect(result.flags.some((f) => f.ruleId === "SS152")).toBe(true);
+  });
+
+  it("SS153: flags tokens embedded in URLs", () => {
+    const result = sanitizeSkillMarkdown("https://api.example.com/hook?access_token=abc123456789");
+    expect(result.flags.some((f) => f.ruleId === "SS153")).toBe(true);
+  });
+});
+
+describe("parseSuppressions - expiry", () => {
+  it("parses suppression expiry metadata", () => {
+    const result = sanitizeSkillMarkdown(
+      "<!-- skill-safe-ignore SS001: tracked false positive -- expires: 2026-06-01 -->",
+    );
+    expect(result.suppressions[0]).toMatchObject({
+      ruleId: "SS001",
+      reason: "tracked false positive",
+      expiresAt: "2026-06-01",
+    });
+  });
+});
+
 describe("getRiskLevel", () => {
   it("maps score 0 to safe", () => {
     expect(getRiskLevel(0)).toBe("safe");

@@ -1,6 +1,6 @@
 {
   "name": "@gsknnft/skill-safe",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Zero-dependency skill sanitizer — scans agent skill markdown for prompt injection, jailbreaks, data exfiltration, and other red flags before installation.",
   "keywords": [
     "agent-skills",
@@ -83,6 +83,11 @@
       "import": "./dist/suppressionAudit.js",
       "default": "./dist/suppressionAudit.js"
     },
+    "./coverage": {
+      "types": "./dist/coverage.d.ts",
+      "import": "./dist/coverage.js",
+      "default": "./dist/coverage.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -124,7 +129,7 @@
     "example:markdown": "pnpm build && node dist/cli.js --file examples/fixtures/malicious-skill.md --full --fail-on never",
     "example:batch": "pnpm build && node dist/cli.js examples/skills --json --fail-on never",
     "demo": "pnpm build && node examples/demo.mjs",
-    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "clean": "node scripts/clean-dist.mjs",
     "validate:mappings": "tsx scripts/validate-mappings.ts",
     "pack:check": "pnpm pack --dry-run"
   },

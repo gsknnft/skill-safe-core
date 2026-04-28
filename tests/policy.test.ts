@@ -5,6 +5,7 @@ describe("policy presets", () => {
   it("exposes stable CI policy presets", () => {
     expect(Object.keys(POLICY_PRESETS).sort()).toEqual([
       "marketplace",
+      "permissive",
       "strict",
       "workspace",
     ]);
@@ -20,6 +21,7 @@ describe("policy presets", () => {
 
   it("validates preset names", () => {
     expect(isPolicyPreset("strict")).toBe(true);
+    expect(isPolicyPreset("permissive")).toBe(true);
     expect(isPolicyPreset("unknown")).toBe(false);
   });
 });

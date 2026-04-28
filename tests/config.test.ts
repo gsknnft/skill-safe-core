@@ -93,9 +93,18 @@ describe("loadConfig", () => {
     expect(config?.scan?.maxDepth).toBe(5);
   });
 
-  it("throws on invalid preset value", async () => {
+  it("loads permissive preset", async () => {
     const dir = await makeTmpDir();
     await writeConfigFile(dir, { preset: "permissive" });
+    const config = await loadConfig(dir);
+    const resolved = resolveConfig(config);
+    expect(resolved.preset).toBe("permissive");
+    expect(resolved.failOn).toBe("never");
+  });
+
+  it("throws on invalid preset value", async () => {
+    const dir = await makeTmpDir();
+    await writeConfigFile(dir, { preset: "ship-it" });
     await expect(loadConfig(dir)).rejects.toThrow(/preset/);
   });
 

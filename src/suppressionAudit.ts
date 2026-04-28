@@ -9,6 +9,7 @@ const BUILT_IN_RULE_IDS = new Set(
 
 export function auditSuppressions(report: SkillSafeFullReport): SuppressionAuditReport {
   const findings: SuppressionAuditFinding[] = [];
+  const now = Date.now();
 
   for (const document of report.documents) {
     const activeRuleIds = new Set(
@@ -18,6 +19,20 @@ export function auditSuppressions(report: SkillSafeFullReport): SuppressionAudit
     );
 
     for (const suppression of document.scan.suppressions) {
+      if (
+        suppression.expiresAt &&
+        !Number.isNaN(Date.parse(suppression.expiresAt)) &&
+        Date.parse(`${suppression.expiresAt}T23:59:59.999Z`) < now
+      ) {
+        findings.push({
+          documentId: document.id,
+          ruleId: suppression.ruleId,
+          line: suppression.line,
+          reason: suppression.reason,
+          issue: "expired-suppression",
+        });
+      }
+
       if (!BUILT_IN_RULE_IDS.has(suppression.ruleId as SkillRuleId)) {
         findings.push({
           documentId: document.id,
@@ -46,6 +61,7 @@ export function auditSuppressions(report: SkillSafeFullReport): SuppressionAudit
     ok: findings.length === 0,
     invalid: findings.filter((finding) => finding.issue === "invalid-rule").length,
     unused: findings.filter((finding) => finding.issue === "unused-suppression").length,
+    expired: findings.filter((finding) => finding.issue === "expired-suppression").length,
     findings,
   };
 }

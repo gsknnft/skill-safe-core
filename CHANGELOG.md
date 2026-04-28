@@ -2,7 +2,7 @@
 
 All notable changes to `@gsknnft/skill-safe` are documented here.
 
-## 0.3.1 - Unreleased
+## 0.4.0 - 2026-04-28
 
 ### Security
 
@@ -14,6 +14,26 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
   executable-looking `eval()` and `process.env` literals from scanner internals
   and docs.
 - Restored frozen lockfile install in the publish workflow.
+
+### Added
+
+- Added `skill-safe.config.json` support for project-level policy.
+- Added `permissive` policy preset for local exploration without CI failure.
+- Added policy presets for `strict`, `marketplace`, `workspace`, and
+  `permissive` scans.
+- Added suppression audit reporting for invalid, expired, and unused ignore
+  comments.
+- Added suppression expiry parsing via `-- expires: YYYY-MM-DD`.
+- Added rule coverage reporting with `--coverage` and public coverage helpers.
+- Added package subpath export:
+  - `@gsknnft/skill-safe/coverage`
+- Added v0.4 static rules:
+  - **SS150** - Git credential helper or `.git-credentials` reads
+  - **SS151** - cloud instance metadata endpoint access
+  - **SS152** - container escape / host privilege primitives
+  - **SS153** - token, API key, secret, or password embedded in URL query
+- Added supply-chain hardening documentation and a provenance-focused publish
+  workflow.
 
 ## 0.3.0 - 2026-04-27
 
