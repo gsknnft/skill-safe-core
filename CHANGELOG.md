@@ -54,6 +54,21 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
 - Added v0.3+ roadmap, contribution guide, security policy, and package-local CI workflow.
 - Added package subpath export:
   - `@gsknnft/skill-safe/resolve-markdown-file`
+- Added policy presets:
+  - `strict`
+  - `marketplace`
+  - `workspace`
+- Added CLI flag `--preset strict|marketplace|workspace`.
+- Added `POLICY_PRESETS`, `getPolicyPreset()`, and `isPolicyPreset()` public APIs.
+- Added suppression audit:
+  - `auditSuppressions()`
+  - `--audit-suppressions`
+  - invalid rule detection
+  - unused suppression detection
+- Added package subpath export:
+  - `@gsknnft/skill-safe/policy`
+- Added package subpath export:
+  - `@gsknnft/skill-safe/suppression-audit`
 
 ### Changed
 
@@ -61,6 +76,9 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
 - Report mapping arrays are now generated from the structured registry while preserving backward-compatible report output.
 - Built-in rule mappings now resolve through the shared registry fallback path.
 - `resolveMarkdownFile()` now uses injected/global `fetch` instead of `axios`.
+- CLI source resolution now applies preset-driven npm policy.
+- Improved SS113 remote prompt loading detection to catch variable URL fetches
+  before instruction/system-prompt use.
 
 ### Fixed
 
@@ -68,7 +86,7 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
 
 ### Tests
 
-- Current package test coverage: `112` passing tests.
+- Current package test coverage: `119` passing tests.
 - Mapping validator confirms:
   - every category has governance mappings
   - content categories cover all four frameworks

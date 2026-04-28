@@ -507,7 +507,7 @@ export const RULES: RuleDefinition[] = [
     name: "remote-prompt-load",
     // Agents that load additional instructions from a remote URL at runtime are
     // susceptible to indirect prompt injection via the remote resource.
-    pattern: /(?:fetch|axios|http\.get|got|request)\s*\(\s*['"`]https?:\/\/[^'"` )]{10,}['"`]\s*\)[^\n]{0,200}(?:system\s+prompt|instruction|directive|eval|exec)/i,
+    pattern: /(?:fetch|axios|http\.get|got|request)\s*\(\s*(?:(?:['"`]https?:\/\/[^'"` )]{10,}['"`])|(?:[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?))\s*\)[\s\S]{0,240}(?:system\s+prompt|instruction|directive|eval|exec)/i,
     severity: "danger",
     category: "prompt-injection",
     description: "Loads remote content and passes it as instructions — indirect prompt injection risk.",

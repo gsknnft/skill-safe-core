@@ -12,13 +12,16 @@ import
 import
     {
         describeSkillSource,
-        resolveAndScanSkillMarkdown,
+        resolveSkillMarkdown,
     } from "./resolver.js";
-import { sanitizeSkillMarkdown, type SuppressionMode } from "./sanitize.js";
+import { appendSanitizationFlags, sanitizeSkillMarkdown, type SuppressionMode } from "./sanitize.js";
 import { stringifySkillSafeSarifJson } from "./sarif.js";
 import { scanSkillDirectory, scanSkillFiles } from "./scanner.js";
 import { requiresSanitization } from "./trust.js";
-import type { SkillSafeFullReport } from "./types.js";
+import { getPolicyPreset, isPolicyPreset } from "./policy.js";
+import { auditSuppressions, type SuppressionAuditReport } from "./suppressionAudit.js";
+import type { NpmSourcePolicy, SkillSafeFullReport } from "./types.js";
+import type { SkillSafePolicyPreset } from "./policy.js";
 
 type Args = {
   source: string | null;
@@ -32,6 +35,9 @@ type Args = {
   out: string | null;
   failOn: "never" | "review" | "block";
   suppressionMode: SuppressionMode;
+  preset: SkillSafePolicyPreset;
+  npmPolicy: NpmSourcePolicy;
+  auditSuppressions: boolean;
   help: boolean;
 };
 
@@ -89,9 +95,11 @@ Options:
   --full              Include full finding mappings/evidence in human output.
   --dir <path>        Recursively scan SKILL.md/skill.md files under a directory.
   --out <path>        Write the report to a file (JSON, SARIF, or Markdown).
+  --preset <name>     strict | marketplace | workspace. Default: workspace.
   --fail-on <mode>    never | review | block. Default: block.
   --honor-suppressions  Apply skill-safe-ignore comments. Use only for trusted sources.
   --no-suppressions     Disable suppression parsing.
+  --audit-suppressions  Report invalid or unused skill-safe-ignore comments.
   --help              Show this help.
 
 Exit codes:
@@ -100,6 +108,7 @@ Exit codes:
 `;
 
 const parseArgs = (argv: string[]): Args => {
+  const policy = getPolicyPreset("workspace");
   const args: Args = {
     source: null,
     file: null,
@@ -110,8 +119,11 @@ const parseArgs = (argv: string[]): Args => {
     markdown: false,
     full: false,
     out: null,
-    failOn: "block",
-    suppressionMode: "report-only",
+    failOn: policy.failOn,
+    suppressionMode: policy.suppressionMode,
+    preset: policy.preset,
+    npmPolicy: policy.npmPolicy,
+    auditSuppressions: false,
     help: false,
   };
 
@@ -135,6 +147,16 @@ const parseArgs = (argv: string[]): Args => {
       args.text = argv[++i] ?? "";
     } else if (value === "--out") {
       args.out = argv[++i] ?? "";
+    } else if (value === "--preset") {
+      const preset = argv[++i] ?? "";
+      if (!isPolicyPreset(preset)) {
+        throw new Error("--preset must be one of: strict, marketplace, workspace");
+      }
+      const nextPolicy = getPolicyPreset(preset);
+      args.preset = nextPolicy.preset;
+      args.failOn = nextPolicy.failOn;
+      args.suppressionMode = nextPolicy.suppressionMode;
+      args.npmPolicy = nextPolicy.npmPolicy;
     } else if (value === "--fail-on") {
       const mode = argv[++i] ?? "";
       if (mode !== "never" && mode !== "review" && mode !== "block") {
@@ -145,6 +167,8 @@ const parseArgs = (argv: string[]): Args => {
       args.suppressionMode = "honor";
     } else if (value === "--no-suppressions") {
       args.suppressionMode = "disabled";
+    } else if (value === "--audit-suppressions") {
+      args.auditSuppressions = true;
     } else if (value.startsWith("--")) {
       throw new Error(`Unknown option: ${value}`);
     } else if (!args.source) {
@@ -160,6 +184,29 @@ const parseArgs = (argv: string[]): Args => {
   }
 
   return args;
+};
+
+const renderSuppressionAudit = (
+  audit: SuppressionAuditReport,
+  args: Args,
+): string => {
+  if (args.json) return `${JSON.stringify(audit, null, 2)}\n`;
+  const lines = [
+    "# skill-safe suppression audit",
+    "",
+    `OK: ${audit.ok ? "yes" : "no"}`,
+    `Invalid suppressions: ${audit.invalid}`,
+    `Unused suppressions: ${audit.unused}`,
+  ];
+  if (audit.findings.length) {
+    lines.push("", "## Findings", "");
+    for (const finding of audit.findings) {
+      lines.push(
+        `- ${finding.documentId}:${finding.line} ${finding.ruleId} ${finding.issue} - ${finding.reason}`,
+      );
+    }
+  }
+  return `${lines.join("\n")}\n`;
 };
 
 const severityRank = {
@@ -212,8 +259,15 @@ const scanText = (text: string, args: Args): SkillSafeFullReport => {
 
 const scanSource = async (source: string, args: Args): Promise<SkillSafeFullReport> => {
   const descriptor = describeSkillSource(source);
-  const resolved = await resolveAndScanSkillMarkdown(source);
-  const scan = resolved.scan ?? sanitizeSkillMarkdown(resolved.markdown, { suppressionMode: args.suppressionMode });
+  const resolved = await resolveSkillMarkdown(source, {
+    npmPolicy: args.npmPolicy,
+  });
+  const scan = requiresSanitization(resolved.trust)
+    ? appendSanitizationFlags(
+        sanitizeSkillMarkdown(resolved.markdown, { suppressionMode: args.suppressionMode }),
+        resolved.sourceFlags,
+      )
+    : null;
 
   return createSkillSafeReport({
     mode: "resolved-source",
@@ -227,7 +281,7 @@ const scanSource = async (source: string, args: Args): Promise<SkillSafeFullRepo
         directlyResolvable: descriptor.directlyResolvable,
         sanitized: requiresSanitization(resolved.trust),
         content: resolved.markdown,
-        scan,
+        scan: scan ?? sanitizeSkillMarkdown("", { suppressionMode: args.suppressionMode }),
       }),
     ],
   });
@@ -276,13 +330,15 @@ async function main(): Promise<void> {
     report = await scanSource(DEFAULT_SOURCE, args);
   }
 
-  const output = renderReport(report, args);
+  const audit = args.auditSuppressions ? auditSuppressions(report) : null;
+  const output = audit ? renderSuppressionAudit(audit, args) : renderReport(report, args);
   if (args.out) {
     await writeFile(args.out, output, "utf8");
   }
   process.stdout.write(output);
 
-  process.exitCode = shouldFail(report, args.failOn) ? 1 : 0;
+  process.exitCode =
+    (audit && !audit.ok) || shouldFail(report, args.failOn) ? 1 : 0;
 }
 
 main().catch((error: unknown) => {
