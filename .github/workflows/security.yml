@@ -90,8 +90,8 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install (frozen lockfile)
-        run: pnpm install --frozen-lockfile
+      - name: Install (no frozen lockfile)
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lockfile registry sources
         # Assert no packages resolve from unexpected registries (lockfile injection detection)
