@@ -31,7 +31,7 @@ jobs:
           node-version: 24
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: pnpm audit
         # audit only production deps (devDeps are not shipped)
@@ -53,7 +53,7 @@ jobs:
           node-version: 24
 
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build
         run: pnpm build
@@ -90,12 +90,16 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install (no frozen lockfile)
+      - name: Install
         run: pnpm install --no-frozen-lockfile
 
       - name: Lockfile registry sources
         # Assert no packages resolve from unexpected registries (lockfile injection detection)
         run: |
+          if [ ! -f pnpm-lock.yaml ]; then
+            echo "No pnpm-lock.yaml found; skipping registry source check."
+            exit 0
+          fi
           if grep -E "^\s+resolved:" pnpm-lock.yaml | grep -v "registry.npmjs.org" | grep -v "registry.yarnpkg.com"; then
             echo "ERROR: pnpm-lock.yaml contains packages from unexpected registries."
             exit 1

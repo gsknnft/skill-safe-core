@@ -12,6 +12,7 @@ pnpm install
 pnpm build
 pnpm test
 pnpm validate:mappings
+pnpm validate:rules
 pnpm example:batch
 pnpm pack --dry-run
 ```
@@ -25,7 +26,8 @@ pnpm pack --dry-run
    - malicious match
    - at least one benign non-match when false positives are plausible
    - obfuscated form when relevant
-5. Update `docs/RULES_REFERENCE.md` if the rule creates a new range/category.
+5. Add a representative sample to `tests/ruleFixtures.test.ts`.
+6. Update `docs/RULES_REFERENCE.md` if the rule creates a new range/category.
 
 ## Suppressions
 

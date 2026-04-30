@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
 [![Zero dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](package.json)
-[![CI](https://github.com/gsknnft/skill-safe/workflows/ci.yml/badge.svg)](https://github.com/gsknnft/skill-safe/workflows/ci.yml)
+[![CI](https://github.com/gsknnft/skill-safe-core/workflows/ci.yml/badge.svg)](https://github.com/gsknnft/skill-safe-core/workflows/ci.yml)
 
 A lightweight static scanner for agent skill markdown before install.
 

@@ -131,6 +131,7 @@
     "demo": "pnpm build && node examples/demo.mjs",
     "clean": "node scripts/clean-dist.mjs",
     "validate:mappings": "tsx scripts/validate-mappings.ts",
+    "validate:rules": "vitest run tests/ruleFixtures.test.ts",
     "pack:check": "pnpm pack --dry-run"
   },
   "devDependencies": {

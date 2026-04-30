@@ -2,7 +2,7 @@
 
 All notable changes to `@gsknnft/skill-safe` are documented here.
 
-## 0.4.0 - 2026-04-28
+## 0.4.0 - 2026-04-29
 
 ### Security
 
@@ -25,6 +25,8 @@ All notable changes to `@gsknnft/skill-safe` are documented here.
   comments.
 - Added suppression expiry parsing via `-- expires: YYYY-MM-DD`.
 - Added rule coverage reporting with `--coverage` and public coverage helpers.
+- Added compact fixture coverage gate for every built-in `SS###` rule via
+  `pnpm validate:rules`.
 - Added package subpath export:
   - `@gsknnft/skill-safe/coverage`
 - Added v0.4 static rules:

@@ -45,6 +45,9 @@ jobs:
       - name: Validate mappings
         run: pnpm validate:mappings
 
+      - name: Validate rule fixtures
+        run: pnpm validate:rules
+
       - name: Example batch scan
         run: pnpm example:batch
 

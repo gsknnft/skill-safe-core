@@ -145,7 +145,7 @@ export const toSarifReport = (
   report: SkillSafeFullReport,
   options: ToSarifOptions = {},
 ): SarifLog => {
-  const version = options.version ?? "0.2.1";
+  const version = options.version ?? "0.4.0";
   const rules = buildRules();
   const ruleIndexById = new Map(rules.map((rule, index) => [rule.id, index]));
 

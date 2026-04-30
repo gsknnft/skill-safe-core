@@ -50,6 +50,8 @@ Implemented for v0.4.0:
 - Suppression audit now reports invalid, unused, and expired suppressions.
 - `--coverage` report for batch scans, plus public coverage helpers and
   `@gsknnft/skill-safe/coverage` subpath export.
+- Compact rule fixture coverage gate through `pnpm validate:rules`, asserting
+  every built-in `SS###` rule has a sample and can still fire.
 - v0.4 static rules:
   - `SS150` Git credential helper and `.git-credentials` reads.
   - `SS151` cloud instance metadata endpoint access.
@@ -65,8 +67,10 @@ Implemented for v0.4.0:
 
 High-value work that should not be confused with the v0.3.0 or v0.4.0 cuts:
 
-- Rule fixture suite: one `good.md`, `bad.md`, and optional `obfuscated.md` per
-  rule family, modeled after Semgrep's fixture-per-rule pattern.
+- Expanded rule fixture suite: one `good.md`, `bad.md`, and optional
+  `obfuscated.md` per rule family, modeled after Semgrep's fixture-per-rule
+  pattern. v0.4 includes the compact all-rule firing gate; v0.5 can expand it
+  into file-based fixtures.
 - Fixture coverage gate: CI asserts every built-in rule has a negative fixture
   before each minor release.
 - More source-policy checks:
